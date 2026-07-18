@@ -9,14 +9,17 @@ from app.db.session import get_db_session
 from app.repositories.caption_repository import CaptionRepository
 from app.repositories.image_repository import ImageRepository
 from app.repositories.product_repository import ProductRepository
+from app.repositories.scheduler_repository import SchedulerRepository
 from app.repositories.user_repository import UserRepository
 from app.services.auth_service import AuthService
 from app.services.caption_service import CaptionService
 from app.services.image_service import ImageService
+from app.services.scheduler_service import SchedulerService
 from app.services.shopee_product_service import ShopeeProductService
 from app.services.user_service import UserService
 from app.utils.ai_caption_engine import AICaptionEngine
 from app.utils.image_generator_engine import ImageGeneratorEngine
+from app.utils.post_publisher import AuditPostPublisher, PostPublisherProtocol, WebhookPostPublisher
 from app.utils.shopee_parser import ShopeeProductParser
 from app.utils.shopee_validator import ShopeeProductValidator
 
@@ -66,6 +69,26 @@ def get_image_service(
         timeout_seconds=settings.image_request_timeout_seconds,
     )
     return ImageService(product_repository, image_repository, generator)
+
+
+def get_scheduler_service(
+    db: Session = Depends(get_db_session),
+    settings: Settings = Depends(get_settings_dependency),
+) -> SchedulerService:
+    scheduler_repository = SchedulerRepository(db)
+
+    publisher: PostPublisherProtocol
+    if settings.scheduler_publisher_mode.lower() == "webhook":
+        if not settings.scheduler_webhook_url:
+            raise AppException(status_code=500, detail="Scheduler webhook URL is required when publisher mode is webhook")
+        publisher = WebhookPostPublisher(
+            webhook_url=settings.scheduler_webhook_url,
+            timeout_seconds=settings.scheduler_webhook_timeout_seconds,
+        )
+    else:
+        publisher = AuditPostPublisher()
+
+    return SchedulerService(scheduler_repository, publisher)
 
 
 def get_current_user_id(

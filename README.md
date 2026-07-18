@@ -28,6 +28,7 @@ backend/
 			images.py
 			products.py
 			router.py
+			scheduler.py
 			users.py
 		core/
 			config.py
@@ -41,11 +42,13 @@ backend/
 			caption.py
 			product.py
 			promotional_image.py
+			scheduled_post.py
 			user.py
 		repositories/
 			caption_repository.py
 			image_repository.py
 			product_repository.py
+			scheduler_repository.py
 			user_repository.py
 		schemas/
 			auth.py
@@ -53,11 +56,13 @@ backend/
 			common.py
 			image.py
 			product.py
+			scheduler.py
 			user.py
 		services/
 			auth_service.py
 			caption_service.py
 			image_service.py
+			scheduler_service.py
 			shopee_product_service.py
 			user_service.py
 		utils/
@@ -65,6 +70,7 @@ backend/
 			caption_prompt_templates.py
 			image_generator_engine.py
 			image_templates.py
+			post_publisher.py
 			shopee_parser.py
 			shopee_validator.py
 		main.py
@@ -87,6 +93,7 @@ backend/
 - Shopee Product Service: URL validation -> parser -> cache lookup/upsert in repository -> API response.
 - AI Caption Engine: product lookup -> prompt template selection by style -> 10 caption generation -> persistent storage.
 - Image Generator: product lookup -> Pillow template rendering for Facebook cover -> PNG file generation -> metadata persistence.
+- Scheduler: schedule storage -> due-job executor -> publisher adapter (audit/webhook) -> execution logs.
 
 ## Local Setup
 
@@ -142,6 +149,9 @@ docker compose up --build
 - `POST /api/v1/products/shopee` (JWT required)
 - `POST /api/v1/captions/generate` (JWT required)
 - `POST /api/v1/images/promotional` (JWT required)
+- `POST /api/v1/scheduler/posts` (JWT required)
+- `POST /api/v1/scheduler/run` (JWT required)
+- `GET /api/v1/scheduler/posts` (JWT required)
 
 ## Testing
 
@@ -174,6 +184,18 @@ pytest -q
 - Config:
 	- `IMAGE_OUTPUT_DIR`
 	- `IMAGE_REQUEST_TIMEOUT_SECONDS`
+
+## Scheduler
+
+- Create scheduled posts for Facebook with product, optional caption batch, and optional promotional image.
+- Run due jobs via API-triggered executor for deterministic operations.
+- Publisher modes:
+	- `audit`: marks scheduled posts as published and logs execution.
+	- `webhook`: posts payload to configured webhook.
+- Config:
+	- `SCHEDULER_PUBLISHER_MODE`
+	- `SCHEDULER_WEBHOOK_URL`
+	- `SCHEDULER_WEBHOOK_TIMEOUT_SECONDS`
 
 ## Logging
 

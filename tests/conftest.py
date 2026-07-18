@@ -10,7 +10,7 @@ from app.api.dependencies import get_db_session, get_shopee_product_service
 from app.core.config import get_settings
 from app.db.base import Base
 from app.main import app
-from app.models import caption, product, promotional_image, user  # noqa: F401
+from app.models import caption, product, promotional_image, scheduled_post, user  # noqa: F401
 from app.repositories.product_repository import ProductRepository
 from app.schemas.product import ProductPayload
 from app.services.shopee_product_service import ShopeeProductService

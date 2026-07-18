@@ -17,6 +17,10 @@ class Settings(BaseSettings):
     image_output_dir: str = Field(default="generated_images")
     image_request_timeout_seconds: float = Field(default=10.0)
 
+    scheduler_publisher_mode: str = Field(default="audit")
+    scheduler_webhook_url: str | None = Field(default=None)
+    scheduler_webhook_timeout_seconds: float = Field(default=10.0)
+
     secret_key: str = Field(default="change-me")
     access_token_expire_minutes: int = Field(default=60)
     jwt_algorithm: str = Field(default="HS256")
