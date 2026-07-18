@@ -21,6 +21,7 @@ Production-ready FastAPI backend foundation with Clean Architecture-inspired lay
 backend/
 	app/
 		api/
+			analytics.py
 			auth.py
 			captions.py
 			dashboard.py
@@ -40,12 +41,14 @@ backend/
 			base.py
 			session.py
 		models/
+			analytics_event.py
 			caption.py
 			product.py
 			promotional_image.py
 			scheduled_post.py
 			user.py
 		repositories/
+			analytics_repository.py
 			caption_repository.py
 			dashboard_repository.py
 			image_repository.py
@@ -53,6 +56,7 @@ backend/
 			scheduler_repository.py
 			user_repository.py
 		schemas/
+			analytics.py
 			auth.py
 			caption.py
 			common.py
@@ -62,6 +66,7 @@ backend/
 			scheduler.py
 			user.py
 		services/
+			analytics_service.py
 			auth_service.py
 			caption_service.py
 			dashboard_service.py
@@ -99,6 +104,7 @@ backend/
 - Image Generator: product lookup -> Pillow template rendering for Facebook cover -> PNG file generation -> metadata persistence.
 - Scheduler: schedule storage -> due-job executor -> publisher adapter (audit/webhook) -> execution logs.
 - Dashboard: aggregated operational KPIs and recent activity feed across products, captions, images, and scheduler.
+- Analytics: event tracking with aggregated overview metrics and event timeline APIs.
 
 ## Local Setup
 
@@ -159,6 +165,8 @@ docker compose up --build
 - `GET /api/v1/scheduler/posts` (JWT required)
 - `GET /api/v1/dashboard/summary` (JWT required)
 - `GET /api/v1/dashboard/activities` (JWT required)
+- `GET /api/v1/analytics/overview` (JWT required)
+- `GET /api/v1/analytics/events` (JWT required)
 
 ## Testing
 
@@ -209,6 +217,12 @@ pytest -q
 - Summary endpoint exposes total counts for products, caption batches, promotional images, and scheduled posts.
 - Scheduler breakdown includes pending, processing, published, and failed jobs.
 - Activities endpoint merges recent caption batches, generated images, and scheduled posts into a single feed.
+
+## Analytics
+
+- Event tracking stored in `analytics_events` table for key actions across product parsing, caption generation, image generation, and scheduler execution.
+- Overview endpoint provides totals by event type and daily event volumes over a configurable time window.
+- Events endpoint returns recent analytics event timeline entries with metadata payloads.
 
 ## Logging
 

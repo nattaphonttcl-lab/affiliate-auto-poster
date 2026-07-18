@@ -6,12 +6,14 @@ from app.core.config import Settings, get_settings
 from app.core.exceptions import AppException
 from app.core.security import decode_access_token
 from app.db.session import get_db_session
+from app.repositories.analytics_repository import AnalyticsRepository
 from app.repositories.caption_repository import CaptionRepository
 from app.repositories.dashboard_repository import DashboardRepository
 from app.repositories.image_repository import ImageRepository
 from app.repositories.product_repository import ProductRepository
 from app.repositories.scheduler_repository import SchedulerRepository
 from app.repositories.user_repository import UserRepository
+from app.services.analytics_service import AnalyticsService
 from app.services.auth_service import AuthService
 from app.services.caption_service import CaptionService
 from app.services.dashboard_service import DashboardService
@@ -36,6 +38,10 @@ def get_user_service(db: Session = Depends(get_db_session)) -> UserService:
     return UserService(UserRepository(db))
 
 
+def get_analytics_repository(db: Session = Depends(get_db_session)) -> AnalyticsRepository:
+    return AnalyticsRepository(db)
+
+
 def get_auth_service(
     db: Session = Depends(get_db_session),
     settings: Settings = Depends(get_settings_dependency),
@@ -46,23 +52,28 @@ def get_auth_service(
 def get_shopee_product_service(
     db: Session = Depends(get_db_session),
     settings: Settings = Depends(get_settings_dependency),
+    analytics_repository: AnalyticsRepository = Depends(get_analytics_repository),
 ) -> ShopeeProductService:
     repository = ProductRepository(db)
     parser = ShopeeProductParser(timeout_seconds=settings.shopee_request_timeout_seconds)
     validator = ShopeeProductValidator()
-    return ShopeeProductService(repository, parser, validator, settings)
+    return ShopeeProductService(repository, parser, validator, settings, analytics_repository)
 
 
-def get_caption_service(db: Session = Depends(get_db_session)) -> CaptionService:
+def get_caption_service(
+    db: Session = Depends(get_db_session),
+    analytics_repository: AnalyticsRepository = Depends(get_analytics_repository),
+) -> CaptionService:
     product_repository = ProductRepository(db)
     caption_repository = CaptionRepository(db)
     engine = AICaptionEngine()
-    return CaptionService(product_repository, caption_repository, engine)
+    return CaptionService(product_repository, caption_repository, engine, analytics_repository)
 
 
 def get_image_service(
     db: Session = Depends(get_db_session),
     settings: Settings = Depends(get_settings_dependency),
+    analytics_repository: AnalyticsRepository = Depends(get_analytics_repository),
 ) -> ImageService:
     product_repository = ProductRepository(db)
     image_repository = ImageRepository(db)
@@ -70,12 +81,13 @@ def get_image_service(
         output_dir=settings.image_output_dir,
         timeout_seconds=settings.image_request_timeout_seconds,
     )
-    return ImageService(product_repository, image_repository, generator)
+    return ImageService(product_repository, image_repository, generator, analytics_repository)
 
 
 def get_scheduler_service(
     db: Session = Depends(get_db_session),
     settings: Settings = Depends(get_settings_dependency),
+    analytics_repository: AnalyticsRepository = Depends(get_analytics_repository),
 ) -> SchedulerService:
     scheduler_repository = SchedulerRepository(db)
 
@@ -90,12 +102,18 @@ def get_scheduler_service(
     else:
         publisher = AuditPostPublisher()
 
-    return SchedulerService(scheduler_repository, publisher)
+    return SchedulerService(scheduler_repository, publisher, analytics_repository)
 
 
 def get_dashboard_service(db: Session = Depends(get_db_session)) -> DashboardService:
     repository = DashboardRepository(db)
     return DashboardService(repository)
+
+
+def get_analytics_service(
+    analytics_repository: AnalyticsRepository = Depends(get_analytics_repository),
+) -> AnalyticsService:
+    return AnalyticsService(analytics_repository)
 
 
 def get_current_user_id(

@@ -1,6 +1,8 @@
 from datetime import UTC, datetime
 
 from app.core.exceptions import AppException
+from app.models.scheduled_post import ScheduledPost
+from app.repositories.analytics_repository import AnalyticsRepositoryProtocol
 from app.repositories.scheduler_repository import SchedulerRepositoryProtocol
 from app.schemas.scheduler import ScheduledPostStatus
 from app.utils.post_publisher import PostPublisherProtocol
@@ -11,9 +13,11 @@ class SchedulerService:
         self,
         scheduler_repository: SchedulerRepositoryProtocol,
         publisher: PostPublisherProtocol,
+        analytics_repository: AnalyticsRepositoryProtocol | None = None,
     ) -> None:
         self._scheduler_repository = scheduler_repository
         self._publisher = publisher
+        self._analytics_repository = analytics_repository
 
     def schedule_post(
         self,
@@ -24,12 +28,12 @@ class SchedulerService:
         platform: str,
         target: str,
         scheduled_for: datetime,
-    ):
+    ) -> ScheduledPost:
         now = datetime.now(UTC)
         if scheduled_for < now:
             raise AppException(status_code=422, detail="Scheduled time must be in the future")
 
-        return self._scheduler_repository.create(
+        created = self._scheduler_repository.create(
             product_id=product_id,
             caption_batch_id=caption_batch_id,
             promotional_image_id=promotional_image_id,
@@ -37,6 +41,16 @@ class SchedulerService:
             target=target,
             scheduled_for=scheduled_for,
         )
+
+        if self._analytics_repository is not None:
+            self._analytics_repository.record_event(
+                event_type="scheduled_post_created",
+                entity_type="scheduled_post",
+                entity_id=created.id,
+                metadata={"product_id": product_id, "platform": platform, "target": target},
+            )
+
+        return created
 
     def run_due(self) -> tuple[int, int, int]:
         now = datetime.now(UTC)
@@ -64,6 +78,13 @@ class SchedulerService:
                     status=ScheduledPostStatus.PUBLISHED.value,
                     message=message,
                 )
+                if self._analytics_repository is not None:
+                    self._analytics_repository.record_event(
+                        event_type="scheduled_post_published",
+                        entity_type="scheduled_post",
+                        entity_id=scheduled_post.id,
+                        metadata={"target": scheduled_post.target},
+                    )
                 published += 1
             except Exception as exc:
                 self._scheduler_repository.update_status(
@@ -76,6 +97,13 @@ class SchedulerService:
                     status=ScheduledPostStatus.FAILED.value,
                     message=str(exc),
                 )
+                if self._analytics_repository is not None:
+                    self._analytics_repository.record_event(
+                        event_type="scheduled_post_failed",
+                        entity_type="scheduled_post",
+                        entity_id=scheduled_post.id,
+                        metadata={"error": str(exc)},
+                    )
                 failed += 1
 
         return len(due_posts), published, failed
