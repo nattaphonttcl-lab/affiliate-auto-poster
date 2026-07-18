@@ -161,6 +161,7 @@ docker compose up --build
 - `POST /api/v1/captions/generate` (JWT required)
 - `POST /api/v1/images/promotional` (JWT required)
 - `POST /api/v1/scheduler/posts` (JWT required)
+- `POST /api/v1/scheduler/posts/{scheduled_post_id}/confirm` (JWT required)
 - `POST /api/v1/scheduler/run` (JWT required)
 - `GET /api/v1/scheduler/posts` (JWT required)
 - `GET /api/v1/dashboard/summary` (JWT required)
@@ -203,7 +204,11 @@ pytest -q
 ## Scheduler
 
 - Create scheduled posts for Facebook with product, optional caption batch, and optional promotional image.
-- Run due jobs via API-triggered executor for deterministic operations.
+- Every scheduled post is owner-scoped (`owner_user_id`) and is only visible/actionable by its owner.
+- Explicit user confirmation is required before any scheduled post can be executed.
+- Confirmation is idempotent and writes audit entries to `scheduled_post_audits`.
+- State machine: `awaiting_confirmation -> confirmed -> processing -> published|failed`.
+- Run due jobs via API-triggered executor for deterministic operations and worker-safe claim semantics.
 - Publisher modes:
 	- `audit`: marks scheduled posts as published and logs execution.
 	- `webhook`: posts payload to configured webhook.
@@ -212,10 +217,16 @@ pytest -q
 	- `SCHEDULER_WEBHOOK_URL`
 	- `SCHEDULER_WEBHOOK_TIMEOUT_SECONDS`
 
+## Platform Safety Policy
+
+- This system does not implement or encourage unsafe Facebook group auto-posting behavior.
+- Publishing flow is constrained to supported integration adapters or explicit user-confirmed execution.
+- Scheduler execution will skip unconfirmed jobs until confirmation is provided.
+
 ## Dashboard
 
 - Summary endpoint exposes total counts for products, caption batches, promotional images, and scheduled posts.
-- Scheduler breakdown includes pending, processing, published, and failed jobs.
+- Scheduler breakdown includes `awaiting_confirmation`, `confirmed`, `processing`, `published`, and `failed` jobs.
 - Activities endpoint merges recent caption batches, generated images, and scheduled posts into a single feed.
 
 ## Analytics

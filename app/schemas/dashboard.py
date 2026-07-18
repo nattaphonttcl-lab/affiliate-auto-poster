@@ -11,7 +11,8 @@ class DashboardTotals(BaseModel):
 
 
 class DashboardSchedulerBreakdown(BaseModel):
-    pending: int
+    awaiting_confirmation: int
+    confirmed: int
     processing: int
     published: int
     failed: int

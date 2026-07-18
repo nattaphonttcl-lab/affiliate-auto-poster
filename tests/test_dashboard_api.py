@@ -10,16 +10,20 @@ from app.models.promotional_image import PromotionalImage
 from app.models.scheduled_post import ScheduledPost
 
 
-def _create_user_and_token(client: TestClient) -> str:
-    client.post("/api/v1/users", json={"email": "dashboard@example.com", "password": "StrongPass123"})
+def _create_user_and_token(client: TestClient) -> tuple[int, str]:
+    create_response = client.post(
+        "/api/v1/users",
+        json={"email": "dashboard@example.com", "password": "StrongPass123"},
+    )
+    user_id = create_response.json()["id"]
     login_response = client.post(
         "/api/v1/auth/login",
         json={"email": "dashboard@example.com", "password": "StrongPass123"},
     )
-    return login_response.json()["access_token"]
+    return user_id, login_response.json()["access_token"]
 
 
-def _seed_dashboard_data(db_session: Session) -> None:
+def _seed_dashboard_data(db_session: Session, owner_user_id: int) -> None:
     now = datetime.now(UTC)
     product = Product(
         source_url="https://shopee.co.id/p/dashboard",
@@ -39,7 +43,9 @@ def _seed_dashboard_data(db_session: Session) -> None:
     db_session.commit()
     db_session.refresh(product)
 
-    caption_batch = CaptionBatch(product_id=product.id, style="promotion", prompt_template="template")
+    caption_batch = CaptionBatch(
+        product_id=product.id, style="promotion", prompt_template="template"
+    )
     db_session.add(caption_batch)
     db_session.commit()
     db_session.refresh(caption_batch)
@@ -59,21 +65,24 @@ def _seed_dashboard_data(db_session: Session) -> None:
     db_session.refresh(image)
 
     scheduled_post = ScheduledPost(
+        owner_user_id=owner_user_id,
         product_id=product.id,
         caption_batch_id=caption_batch.id,
         promotional_image_id=image.id,
         platform="facebook",
         target="fb-page-1",
         scheduled_for=now + timedelta(hours=1),
-        status="pending",
+        state="awaiting_confirmation",
     )
     db_session.add(scheduled_post)
     db_session.commit()
 
 
-def test_dashboard_summary_and_activities(client: TestClient, db_session: Session) -> None:
-    _seed_dashboard_data(db_session)
-    token = _create_user_and_token(client)
+def test_dashboard_summary_and_activities(
+    client: TestClient, db_session: Session
+) -> None:
+    owner_user_id, token = _create_user_and_token(client)
+    _seed_dashboard_data(db_session, owner_user_id=owner_user_id)
 
     summary_response = client.get(
         "/api/v1/dashboard/summary",
@@ -86,7 +95,7 @@ def test_dashboard_summary_and_activities(client: TestClient, db_session: Sessio
     assert summary["totals"]["caption_batches"] == 1
     assert summary["totals"]["promotional_images"] == 1
     assert summary["totals"]["scheduled_posts"] == 1
-    assert summary["scheduler"]["pending"] == 1
+    assert summary["scheduler"]["awaiting_confirmation"] == 1
 
     activity_response = client.get(
         "/api/v1/dashboard/activities?limit=10",

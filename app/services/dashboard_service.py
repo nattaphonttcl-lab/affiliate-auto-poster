@@ -23,7 +23,8 @@ class DashboardService:
                 scheduled_posts=self._repository.count_scheduled_posts(),
             ),
             scheduler=DashboardSchedulerBreakdown(
-                pending=breakdown.get("pending", 0),
+                awaiting_confirmation=breakdown.get("awaiting_confirmation", 0),
+                confirmed=breakdown.get("confirmed", 0),
                 processing=breakdown.get("processing", 0),
                 published=breakdown.get("published", 0),
                 failed=breakdown.get("failed", 0),
@@ -60,7 +61,7 @@ class DashboardService:
                 DashboardActivityItem(
                     type="scheduled_post",
                     reference_id=post.id,
-                    status=post.status,
+                    status=post.state,
                     occurred_at=post.created_at,
                     description=f"Scheduled post created for target {post.target}",
                 )
