@@ -22,6 +22,8 @@ def test_validate_url_rejects_invalid_hosts_or_schemes(invalid_url: str) -> None
 def test_validate_payload_rejects_non_positive_price() -> None:
     validator = ShopeeProductValidator()
     payload = ProductPayload(
+        marketplace="shopee",
+        normalized_url="https://shopee.co.id/product",
         title="Product",
         price=0,
         images=[],

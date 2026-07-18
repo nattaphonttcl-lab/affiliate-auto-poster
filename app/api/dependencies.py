@@ -2,6 +2,7 @@ from fastapi import Depends
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 
+from app.core.cache import InMemoryTTLCache
 from app.core.config import Settings, get_settings
 from app.core.exceptions import AppException
 from app.core.security import decode_access_token
@@ -18,6 +19,10 @@ from app.services.auth_service import AuthService
 from app.services.caption_service import CaptionService
 from app.services.dashboard_service import DashboardService
 from app.services.image_service import ImageService
+from app.services.marketplace_provider import MarketplaceProviderRegistry
+from app.services.product_service import ProductService
+from app.services.provider_factory import build_provider_registry
+from app.services.refresh_queue import InMemoryProductRefreshQueue, ProductRefreshQueue
 from app.services.scheduler_service import SchedulerService
 from app.services.shopee_product_service import ShopeeProductService
 from app.services.user_service import UserService
@@ -32,6 +37,8 @@ from app.utils.shopee_parser import ShopeeProductParser
 from app.utils.shopee_validator import ShopeeProductValidator
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
+_product_cache = InMemoryTTLCache()
+_refresh_queue = InMemoryProductRefreshQueue()
 
 
 def get_settings_dependency() -> Settings:
@@ -55,19 +62,47 @@ def get_auth_service(
     return AuthService(UserRepository(db), settings)
 
 
-def get_shopee_product_service(
-    db: Session = Depends(get_db_session),
+def get_marketplace_provider_registry(
     settings: Settings = Depends(get_settings_dependency),
-    analytics_repository: AnalyticsRepository = Depends(get_analytics_repository),
-) -> ShopeeProductService:
-    repository = ProductRepository(db)
+) -> MarketplaceProviderRegistry:
     parser = ShopeeProductParser(
         timeout_seconds=settings.shopee_request_timeout_seconds
     )
     validator = ShopeeProductValidator()
-    return ShopeeProductService(
-        repository, parser, validator, settings, analytics_repository
+    return build_provider_registry(
+        shopee_parser=parser,
+        shopee_validator=validator,
     )
+
+
+def get_product_refresh_queue() -> ProductRefreshQueue:
+    return _refresh_queue
+
+
+def get_product_service(
+    db: Session = Depends(get_db_session),
+    settings: Settings = Depends(get_settings_dependency),
+    provider_registry: MarketplaceProviderRegistry = Depends(
+        get_marketplace_provider_registry
+    ),
+    refresh_queue: ProductRefreshQueue = Depends(get_product_refresh_queue),
+    analytics_repository: AnalyticsRepository = Depends(get_analytics_repository),
+) -> ProductService:
+    repository = ProductRepository(db)
+    return ProductService(
+        repository,
+        provider_registry,
+        _product_cache,
+        refresh_queue,
+        cache_ttl_minutes=settings.shopee_cache_ttl_minutes,
+        analytics_repository=analytics_repository,
+    )
+
+
+def get_shopee_product_service(
+    product_service: ProductService = Depends(get_product_service),
+) -> ShopeeProductService:
+    return ShopeeProductService(product_service=product_service)
 
 
 def get_caption_service(

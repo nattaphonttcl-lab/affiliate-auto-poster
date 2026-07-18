@@ -27,6 +27,11 @@ def _seed_dashboard_data(db_session: Session, owner_user_id: int) -> None:
     now = datetime.now(UTC)
     product = Product(
         source_url="https://shopee.co.id/p/dashboard",
+        normalized_url="https://shopee.co.id/p/dashboard",
+        marketplace="shopee",
+        external_product_id="dashboard",
+        fingerprint="dashboard-fingerprint",
+        aggregate_version=1,
         title="Dashboard Product",
         price=Decimal("99.00"),
         original_price=Decimal("129.00"),

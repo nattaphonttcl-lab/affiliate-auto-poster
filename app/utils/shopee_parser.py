@@ -51,9 +51,25 @@ class ShopeeProductParser:
             )
             response.raise_for_status()
             return response.text
+        except httpx.TimeoutException as exc:
+            raise AppException(
+                status_code=504,
+                detail="Marketplace provider timeout",
+            ) from exc
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code == 429:
+                raise AppException(
+                    status_code=429,
+                    detail="Marketplace rate limit exceeded",
+                ) from exc
+            raise AppException(
+                status_code=503,
+                detail="Marketplace provider unavailable",
+            ) from exc
         except httpx.HTTPError as exc:
             raise AppException(
-                status_code=502, detail="Failed to fetch Shopee product page"
+                status_code=503,
+                detail="Marketplace provider unavailable",
             ) from exc
 
     def _extract_state_blob(self, html: str) -> dict[str, Any] | None:
@@ -177,6 +193,8 @@ class ShopeeProductParser:
         )
 
         return ProductPayload(
+            marketplace="shopee",
+            normalized_url=url,
             title=title.strip(),
             price=price,
             original_price=original_price,
@@ -204,6 +222,8 @@ class ShopeeProductParser:
         images = [image] if image else []
 
         return ProductPayload(
+            marketplace="shopee",
+            normalized_url=url,
             title=title.strip(),
             price=price,
             images=images,

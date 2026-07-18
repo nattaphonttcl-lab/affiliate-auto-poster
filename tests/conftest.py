@@ -60,6 +60,8 @@ def client(db_session: Session) -> Generator[TestClient, None, None]:
 class _StaticParser:
     def parse(self, url: str) -> ProductPayload:
         return ProductPayload(
+            marketplace="shopee",
+            normalized_url=url,
             title="Portable Blender",
             price="149.00",
             original_price="199.00",

@@ -99,7 +99,7 @@ backend/
 - Repository Layer (`app/repositories`): persistence access through SQLAlchemy session.
 - Domain Model Layer (`app/models`): SQLAlchemy ORM entities.
 - Infrastructure Layer (`app/core`, `app/db`): settings, security, logging, DB session lifecycle.
-- Shopee Product Service: URL validation -> parser -> cache lookup/upsert in repository -> API response.
+- Marketplace Product Module: provider registry/factory -> URL normalizer -> product fingerprint -> cache-aware aggregate repository upsert.
 - AI Caption Engine: product lookup -> prompt template selection by style -> 10 caption generation -> persistent storage.
 - Image Generator: product lookup -> Pillow template rendering for Facebook cover -> PNG file generation -> metadata persistence.
 - Scheduler: schedule storage -> due-job executor -> publisher adapter (audit/webhook) -> execution logs.
@@ -159,7 +159,13 @@ docker compose up --build
 - `GET /api/v1/users` (JWT required)
 - `GET /api/v1/users/{user_id}` (JWT required)
 - `PATCH /api/v1/users/{user_id}` (JWT required)
-- `POST /api/v1/products/shopee` (JWT required)
+- `POST /api/v1/products/shopee` (JWT required, backward-compatible legacy endpoint)
+- `POST /api/v1/products/import` (JWT required)
+- `GET /api/v1/products` (JWT required)
+- `GET /api/v1/products/{product_id}` (JWT required)
+- `PATCH /api/v1/products/{product_id}` (JWT required)
+- `DELETE /api/v1/products/{product_id}` (JWT required)
+- `POST /api/v1/products/{product_id}/refresh` (JWT required)
 - `POST /api/v1/captions/generate` (JWT required)
 - `POST /api/v1/images/promotional` (JWT required)
 - `POST /api/v1/scheduler/posts` (JWT required)
@@ -187,12 +193,36 @@ alembic upgrade head
 python -m compileall app tests alembic
 ```
 
-## Shopee Product Service
+## Marketplace Product Module
 
-- Input: Shopee product URL.
-- Output fields: `title`, `price`, `original_price`, `discount`, `rating`, `sold_count`, `images`, `shop_name`, `category`, `affiliate_url`.
-- Cache: persisted in `products` table with TTL (`SHOPEE_CACHE_TTL_MINUTES`).
-- Parser timeout: `SHOPEE_REQUEST_TIMEOUT_SECONDS`.
+- Aggregate entities:
+	- `products`
+	- `product_images`
+	- `product_price_histories`
+	- `product_categories`
+	- `product_version_histories`
+- Provider architecture:
+	- `MarketplaceProvider`
+	- `ShopeeProvider`
+	- `LazadaProvider` (stub)
+	- `TikTokShopProvider` (stub)
+	- `MarketplaceProviderRegistry`
+	- `build_provider_registry` provider factory
+- URL security and normalization:
+	- Public-network URL validation
+	- Host normalization and canonical URL generation
+	- Unsupported marketplace rejection
+- Duplicate prevention:
+	- Product fingerprint (`sha256`) from marketplace + external product id + normalized URL
+	- Repository upsert by fingerprint/normalized URL
+- Cache layer:
+	- In-memory TTL cache abstraction (`CacheBackend`, `InMemoryTTLCache`)
+	- Cache-first lookup before provider fetch
+- Refresh queue:
+	- Queue abstraction (`ProductRefreshQueue`)
+	- In-memory implementation (`InMemoryProductRefreshQueue`)
+- Backward compatibility:
+	- Legacy endpoint `POST /api/v1/products/shopee` remains supported
 
 ## AI Caption Engine
 
@@ -257,7 +287,7 @@ python -m compileall app tests alembic
 
 ## Tracing
 
-- OpenTelemetry tracing is supported and enabled by default (`TRACING_ENABLED=true`).
+- OpenTelemetry tracing is supported and opt-in by configuration (`TRACING_ENABLED=false` by default).
 - FastAPI and SQLAlchemy are instrumented automatically on app startup.
 - Configure service identity and exporter target with:
 	- `TRACING_SERVICE_NAME`

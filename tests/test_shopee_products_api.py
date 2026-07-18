@@ -18,6 +18,8 @@ class CountingParser:
     def parse(self, url: str) -> ProductPayload:
         self.calls += 1
         return ProductPayload(
+            marketplace="shopee",
+            normalized_url=url,
             title="Shopee Keyboard",
             price=Decimal("49.90"),
             original_price=Decimal("59.90"),

@@ -9,6 +9,11 @@ from app.utils.ai_caption_engine import AICaptionEngine
 def _sample_product() -> Product:
     return Product(
         source_url="https://shopee.co.id/sample",
+        normalized_url="https://shopee.co.id/sample",
+        marketplace="shopee",
+        external_product_id="sample",
+        fingerprint="sample-fingerprint",
+        aggregate_version=1,
         title="Portable Blender",
         price=Decimal("149.00"),
         original_price=Decimal("199.00"),

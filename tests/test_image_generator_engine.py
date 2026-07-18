@@ -35,6 +35,11 @@ def test_image_generator_creates_png_file(tmp_path: Path) -> None:
 
     product = Product(
         source_url="https://shopee.co.id/p/test",
+        normalized_url="https://shopee.co.id/p/test",
+        marketplace="shopee",
+        external_product_id="test",
+        fingerprint="test-fingerprint",
+        aggregate_version=1,
         title="Wireless Headset",
         price=Decimal("99.90"),
         original_price=Decimal("129.90"),
