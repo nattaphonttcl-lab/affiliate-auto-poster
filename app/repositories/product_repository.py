@@ -9,6 +9,8 @@ from app.schemas.product import ProductPayload
 
 
 class ProductRepositoryProtocol(Protocol):
+    def get_by_id(self, product_id: int) -> Product | None: ...
+
     def get_valid_by_source_url(self, source_url: str, now: datetime) -> Product | None: ...
 
     def upsert_cached(self, *, source_url: str, payload: ProductPayload, now: datetime, ttl_minutes: int) -> Product: ...
@@ -17,6 +19,9 @@ class ProductRepositoryProtocol(Protocol):
 class ProductRepository(ProductRepositoryProtocol):
     def __init__(self, db: Session) -> None:
         self._db = db
+
+    def get_by_id(self, product_id: int) -> Product | None:
+        return self._db.get(Product, product_id)
 
     def get_valid_by_source_url(self, source_url: str, now: datetime) -> Product | None:
         stmt = select(Product).where(Product.source_url == source_url, Product.expires_at > now)

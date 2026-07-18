@@ -22,6 +22,7 @@ backend/
 	app/
 		api/
 			auth.py
+			captions.py
 			dependencies.py
 			health.py
 			products.py
@@ -36,21 +37,27 @@ backend/
 			base.py
 			session.py
 		models/
+			caption.py
 			product.py
 			user.py
 		repositories/
+			caption_repository.py
 			product_repository.py
 			user_repository.py
 		schemas/
 			auth.py
+			caption.py
 			common.py
 			product.py
 			user.py
 		services/
-			shopee_product_service.py
 			auth_service.py
+			caption_service.py
+			shopee_product_service.py
 			user_service.py
 		utils/
+			ai_caption_engine.py
+			caption_prompt_templates.py
 			shopee_parser.py
 			shopee_validator.py
 		main.py
@@ -71,6 +78,7 @@ backend/
 - Domain Model Layer (`app/models`): SQLAlchemy ORM entities.
 - Infrastructure Layer (`app/core`, `app/db`): settings, security, logging, DB session lifecycle.
 - Shopee Product Service: URL validation -> parser -> cache lookup/upsert in repository -> API response.
+- AI Caption Engine: product lookup -> prompt template selection by style -> 10 caption generation -> persistent storage.
 
 ## Local Setup
 
@@ -124,6 +132,7 @@ docker compose up --build
 - `GET /api/v1/users/{user_id}` (JWT required)
 - `PATCH /api/v1/users/{user_id}` (JWT required)
 - `POST /api/v1/products/shopee` (JWT required)
+- `POST /api/v1/captions/generate` (JWT required)
 
 ## Testing
 
@@ -137,6 +146,14 @@ pytest -q
 - Output fields: `title`, `price`, `original_price`, `discount`, `rating`, `sold_count`, `images`, `shop_name`, `category`, `affiliate_url`.
 - Cache: persisted in `products` table with TTL (`SHOPEE_CACHE_TTL_MINUTES`).
 - Parser timeout: `SHOPEE_REQUEST_TIMEOUT_SECONDS`.
+
+## AI Caption Engine
+
+- Input: `product_id` and style.
+- Supported styles: `funny`, `review`, `promotion`, `storytelling`, `urgency`.
+- Output: exactly 10 Facebook-ready captions; each item contains `hook`, `cta`, `emoji`, `hashtags`, and `caption_text`.
+- Prompt templates: centralized in `app/utils/caption_prompt_templates.py` and used by `AICaptionEngine`.
+- Persistence: generated caption batches and caption items are stored in `caption_batches` and `captions` tables.
 
 ## Logging
 
