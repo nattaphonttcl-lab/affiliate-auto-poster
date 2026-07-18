@@ -1,8 +1,10 @@
 from datetime import UTC, datetime, timedelta
 
 from fastapi.testclient import TestClient
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.models.outbox_event import OutboxEvent
 from app.models.scheduled_post import ScheduledPost
 
 
@@ -92,6 +94,7 @@ def test_scheduler_run_publishes_due_post(
     )
     assert confirm_response.status_code == 200
     assert confirm_response.json()["state"] == "confirmed"
+    assert confirm_response.json()["version"] == 2
 
     confirm_response_again = client.post(
         f"/api/v1/scheduler/posts/{scheduled_post_id}/confirm",
@@ -124,6 +127,18 @@ def test_scheduler_run_publishes_due_post(
     )
     assert list_response.status_code == 200
     assert list_response.json()[0]["state"] == "published"
+    assert list_response.json()[0]["version"] == 4
+
+    total_outbox_events = db_session.scalar(select(func.count(OutboxEvent.id)))
+    assert total_outbox_events == 4
+
+    event_types = list(db_session.scalars(select(OutboxEvent.event_type)).all())
+    assert set(event_types) == {
+        "scheduled_post.created",
+        "scheduled_post.confirmed",
+        "scheduled_post.published",
+    }
+    assert event_types.count("scheduled_post.confirmed") == 2
 
 
 def test_scheduler_enforces_owner_authorization(

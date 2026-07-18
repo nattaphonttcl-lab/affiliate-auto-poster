@@ -48,7 +48,9 @@ def test_image_generator_creates_png_file(tmp_path: Path) -> None:
         expires_at=datetime.now(UTC),
     )
 
-    result = engine.generate_promotional_cover(product=product, template=ImageTemplate.BOLD, shop_logo_url=logo_url)
+    result = engine.generate_promotional_cover(
+        product=product, template=ImageTemplate.BOLD, shop_logo_url=logo_url
+    )
 
     output_path = Path(result.output_path)
     assert output_path.exists()

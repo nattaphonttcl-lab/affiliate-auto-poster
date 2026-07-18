@@ -26,6 +26,11 @@ class Settings(BaseSettings):
     jwt_algorithm: str = Field(default="HS256")
 
     log_level: str = Field(default="INFO")
+    log_json: bool = Field(default=True)
+
+    tracing_enabled: bool = Field(default=False)
+    tracing_service_name: str = Field(default="affiliate-auto-poster-backend")
+    tracing_otlp_endpoint: str | None = Field(default=None)
 
     model_config = SettingsConfigDict(
         env_file=".env",

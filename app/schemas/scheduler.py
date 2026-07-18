@@ -39,6 +39,7 @@ class ScheduledPostCreateRequest(BaseModel):
 
 class ScheduledPostRead(BaseModel):
     id: int
+    version: int
     owner_user_id: int
     product_id: int
     caption_batch_id: int | None

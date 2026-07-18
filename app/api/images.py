@@ -1,13 +1,19 @@
 from fastapi import APIRouter, Depends, status
 
 from app.api.dependencies import get_current_user_id, get_image_service
-from app.schemas.image import ImageTemplate, PromotionalImageGenerateRequest, PromotionalImageRead
+from app.schemas.image import (
+    ImageTemplate,
+    PromotionalImageGenerateRequest,
+    PromotionalImageRead,
+)
 from app.services.image_service import ImageService
 
 router = APIRouter(prefix="/images", tags=["images"])
 
 
-@router.post("/promotional", response_model=PromotionalImageRead, status_code=status.HTTP_200_OK)
+@router.post(
+    "/promotional", response_model=PromotionalImageRead, status_code=status.HTTP_200_OK
+)
 def generate_promotional_image(
     payload: PromotionalImageGenerateRequest,
     _: int = Depends(get_current_user_id),
@@ -16,7 +22,9 @@ def generate_promotional_image(
     created = service.generate_promotional_image(
         product_id=payload.product_id,
         template=payload.template,
-        shop_logo_url=str(payload.shop_logo_url) if payload.shop_logo_url is not None else None,
+        shop_logo_url=(
+            str(payload.shop_logo_url) if payload.shop_logo_url is not None else None
+        ),
     )
 
     return PromotionalImageRead(

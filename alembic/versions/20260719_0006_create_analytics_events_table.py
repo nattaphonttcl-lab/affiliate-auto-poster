@@ -23,13 +23,35 @@ def upgrade() -> None:
         sa.Column("entity_type", sa.String(length=64), nullable=False),
         sa.Column("entity_id", sa.Integer(), nullable=True),
         sa.Column("metadata", sa.JSON(), nullable=False),
-        sa.Column("occurred_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column(
+            "occurred_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.func.now(),
+            nullable=False,
+        ),
     )
     op.create_index("ix_analytics_events_id", "analytics_events", ["id"], unique=False)
-    op.create_index("ix_analytics_events_event_type", "analytics_events", ["event_type"], unique=False)
-    op.create_index("ix_analytics_events_entity_type", "analytics_events", ["entity_type"], unique=False)
-    op.create_index("ix_analytics_events_entity_id", "analytics_events", ["entity_id"], unique=False)
-    op.create_index("ix_analytics_events_occurred_at", "analytics_events", ["occurred_at"], unique=False)
+    op.create_index(
+        "ix_analytics_events_event_type",
+        "analytics_events",
+        ["event_type"],
+        unique=False,
+    )
+    op.create_index(
+        "ix_analytics_events_entity_type",
+        "analytics_events",
+        ["entity_type"],
+        unique=False,
+    )
+    op.create_index(
+        "ix_analytics_events_entity_id", "analytics_events", ["entity_id"], unique=False
+    )
+    op.create_index(
+        "ix_analytics_events_occurred_at",
+        "analytics_events",
+        ["occurred_at"],
+        unique=False,
+    )
 
 
 def downgrade() -> None:

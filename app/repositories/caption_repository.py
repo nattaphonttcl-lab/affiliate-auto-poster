@@ -31,7 +31,9 @@ class CaptionRepository(CaptionRepositoryProtocol):
         prompt_template: str,
         captions: Sequence[GeneratedCaption],
     ) -> tuple[CaptionBatch, list[Caption]]:
-        batch = CaptionBatch(product_id=product_id, style=style, prompt_template=prompt_template)
+        batch = CaptionBatch(
+            product_id=product_id, style=style, prompt_template=prompt_template
+        )
         self._db.add(batch)
         self._db.flush()
 
@@ -52,6 +54,10 @@ class CaptionRepository(CaptionRepositoryProtocol):
         self._db.commit()
         self._db.refresh(batch)
 
-        stmt = select(Caption).where(Caption.batch_id == batch.id).order_by(Caption.sequence.asc())
+        stmt = (
+            select(Caption)
+            .where(Caption.batch_id == batch.id)
+            .order_by(Caption.sequence.asc())
+        )
         persisted = list(self._db.scalars(stmt))
         return batch, persisted

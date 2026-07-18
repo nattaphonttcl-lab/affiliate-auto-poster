@@ -14,7 +14,10 @@ from app.utils.image_generator_engine import ImageGeneratorEngine
 
 
 def _create_user_and_token(client: TestClient) -> str:
-    client.post("/api/v1/users", json={"email": "images@example.com", "password": "StrongPass123"})
+    client.post(
+        "/api/v1/users",
+        json={"email": "images@example.com", "password": "StrongPass123"},
+    )
     login_response = client.post(
         "/api/v1/auth/login",
         json={"email": "images@example.com", "password": "StrongPass123"},
@@ -24,7 +27,11 @@ def _create_user_and_token(client: TestClient) -> str:
 
 def _create_product(client: TestClient, token: str) -> int:
     headers = {"Authorization": f"Bearer {token}"}
-    response = client.post("/api/v1/products/shopee", json={"url": "https://shopee.co.id/p/headset"}, headers=headers)
+    response = client.post(
+        "/api/v1/products/shopee",
+        json={"url": "https://shopee.co.id/p/headset"},
+        headers=headers,
+    )
     assert response.status_code == 200
     return response.json()["id"]
 
@@ -54,7 +61,9 @@ def test_generate_promotional_image_api(
         timeout_seconds=1.0,
         image_fetcher=lambda source: payloads[source],
     )
-    service = ImageService(ProductRepository(db_session), ImageRepository(db_session), generator)
+    service = ImageService(
+        ProductRepository(db_session), ImageRepository(db_session), generator
+    )
 
     def override_image_service() -> ImageService:
         return service

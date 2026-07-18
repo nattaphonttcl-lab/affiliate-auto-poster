@@ -37,4 +37,6 @@ class WebhookPostPublisher(PostPublisherProtocol):
             response.raise_for_status()
             return f"WEBHOOK-PUBLISHED:{scheduled_post.id}"
         except httpx.HTTPError as exc:
-            raise AppException(status_code=502, detail="Failed to publish scheduled post to webhook") from exc
+            raise AppException(
+                status_code=502, detail="Failed to publish scheduled post to webhook"
+            ) from exc

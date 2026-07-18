@@ -7,7 +7,10 @@ from app.services.shopee_product_service import ShopeeProductService
 
 
 def _create_user_and_token(client: TestClient) -> str:
-    client.post("/api/v1/users", json={"email": "captions@example.com", "password": "StrongPass123"})
+    client.post(
+        "/api/v1/users",
+        json={"email": "captions@example.com", "password": "StrongPass123"},
+    )
     login_response = client.post(
         "/api/v1/auth/login",
         json={"email": "captions@example.com", "password": "StrongPass123"},
@@ -17,7 +20,11 @@ def _create_user_and_token(client: TestClient) -> str:
 
 def _create_product(client: TestClient, token: str) -> int:
     headers = {"Authorization": f"Bearer {token}"}
-    response = client.post("/api/v1/products/shopee", json={"url": "https://shopee.co.id/p/portable-blender"}, headers=headers)
+    response = client.post(
+        "/api/v1/products/shopee",
+        json={"url": "https://shopee.co.id/p/portable-blender"},
+        headers=headers,
+    )
     return response.json()["id"]
 
 
@@ -44,7 +51,10 @@ def test_generate_captions_returns_10_items(
     body = response.json()
     assert body["style"] == style
     assert len(body["captions"]) == 10
-    assert all("hook" in item and "cta" in item and "emoji" in item and "hashtags" in item for item in body["captions"])
+    assert all(
+        "hook" in item and "cta" in item and "emoji" in item and "hashtags" in item
+        for item in body["captions"]
+    )
 
 
 def test_generate_captions_returns_404_for_missing_product(client: TestClient) -> None:

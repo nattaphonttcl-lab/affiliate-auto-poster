@@ -11,9 +11,18 @@ from app.schemas.product import ProductPayload
 class ProductRepositoryProtocol(Protocol):
     def get_by_id(self, product_id: int) -> Product | None: ...
 
-    def get_valid_by_source_url(self, source_url: str, now: datetime) -> Product | None: ...
+    def get_valid_by_source_url(
+        self, source_url: str, now: datetime
+    ) -> Product | None: ...
 
-    def upsert_cached(self, *, source_url: str, payload: ProductPayload, now: datetime, ttl_minutes: int) -> Product: ...
+    def upsert_cached(
+        self,
+        *,
+        source_url: str,
+        payload: ProductPayload,
+        now: datetime,
+        ttl_minutes: int
+    ) -> Product: ...
 
 
 class ProductRepository(ProductRepositoryProtocol):
@@ -24,11 +33,22 @@ class ProductRepository(ProductRepositoryProtocol):
         return self._db.get(Product, product_id)
 
     def get_valid_by_source_url(self, source_url: str, now: datetime) -> Product | None:
-        stmt = select(Product).where(Product.source_url == source_url, Product.expires_at > now)
+        stmt = select(Product).where(
+            Product.source_url == source_url, Product.expires_at > now
+        )
         return self._db.execute(stmt).scalar_one_or_none()
 
-    def upsert_cached(self, *, source_url: str, payload: ProductPayload, now: datetime, ttl_minutes: int) -> Product:
-        product = self._db.execute(select(Product).where(Product.source_url == source_url)).scalar_one_or_none()
+    def upsert_cached(
+        self,
+        *,
+        source_url: str,
+        payload: ProductPayload,
+        now: datetime,
+        ttl_minutes: int
+    ) -> Product:
+        product = self._db.execute(
+            select(Product).where(Product.source_url == source_url)
+        ).scalar_one_or_none()
         expires_at = now + timedelta(minutes=ttl_minutes)
 
         if product is None:

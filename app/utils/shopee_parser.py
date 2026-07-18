@@ -36,18 +36,25 @@ class ShopeeProductParser:
         if fallback_payload:
             return fallback_payload
 
-        raise AppException(status_code=422, detail="Unable to parse Shopee product from the provided URL")
+        raise AppException(
+            status_code=422,
+            detail="Unable to parse Shopee product from the provided URL",
+        )
 
     def _fetch_html(self, url: str) -> str:
         if self._html_fetcher is not None:
             return self._html_fetcher(url)
 
         try:
-            response = httpx.get(url, follow_redirects=True, timeout=self._timeout_seconds)
+            response = httpx.get(
+                url, follow_redirects=True, timeout=self._timeout_seconds
+            )
             response.raise_for_status()
             return response.text
         except httpx.HTTPError as exc:
-            raise AppException(status_code=502, detail="Failed to fetch Shopee product page") from exc
+            raise AppException(
+                status_code=502, detail="Failed to fetch Shopee product page"
+            ) from exc
 
     def _extract_state_blob(self, html: str) -> dict[str, Any] | None:
         markers = [
@@ -63,7 +70,9 @@ class ShopeeProductParser:
 
         return None
 
-    def _extract_json_object_after_marker(self, text: str, marker: str) -> dict[str, Any] | None:
+    def _extract_json_object_after_marker(
+        self, text: str, marker: str
+    ) -> dict[str, Any] | None:
         index = text.find(marker)
         if index < 0:
             return None
@@ -121,9 +130,10 @@ class ShopeeProductParser:
 
             if isinstance(node, dict):
                 keys = set(node.keys())
-                if ({"name", "price"}.issubset(keys) or {"title", "price"}.issubset(keys)) and (
-                    "image" in keys or "images" in keys
-                ):
+                if (
+                    {"name", "price"}.issubset(keys)
+                    or {"title", "price"}.issubset(keys)
+                ) and ("image" in keys or "images" in keys):
                     return node
 
                 for value in node.values():
@@ -133,7 +143,9 @@ class ShopeeProductParser:
 
         return None
 
-    def _build_payload_from_candidate(self, url: str, candidate: dict[str, Any] | None) -> ProductPayload | None:
+    def _build_payload_from_candidate(
+        self, url: str, candidate: dict[str, Any] | None
+    ) -> ProductPayload | None:
         if candidate is None:
             return None
 
@@ -143,16 +155,26 @@ class ShopeeProductParser:
         if title is None or price is None:
             return None
 
-        original_price = self._to_decimal(self._first_value(candidate, ["price_before_discount", "original_price"]))
+        original_price = self._to_decimal(
+            self._first_value(candidate, ["price_before_discount", "original_price"])
+        )
         discount = self._first_string(candidate, ["discount", "raw_discount"])
-        rating = self._to_float(self._nested_value(candidate, ["item_rating", "rating_star"]))
-        sold_count = self._to_int(self._first_value(candidate, ["historical_sold", "sold", "sold_count"]))
+        rating = self._to_float(
+            self._nested_value(candidate, ["item_rating", "rating_star"])
+        )
+        sold_count = self._to_int(
+            self._first_value(candidate, ["historical_sold", "sold", "sold_count"])
+        )
 
         image_values = self._first_value(candidate, ["images", "image"])
         images = self._normalize_images(image_values)
 
-        shop_name = self._first_string(candidate, ["shop_name"]) or self._nested_string(candidate, ["shop", "name"])
-        category = self._first_string(candidate, ["category"]) or self._nested_string(candidate, ["cat", "name"])
+        shop_name = self._first_string(candidate, ["shop_name"]) or self._nested_string(
+            candidate, ["shop", "name"]
+        )
+        category = self._first_string(candidate, ["category"]) or self._nested_string(
+            candidate, ["cat", "name"]
+        )
 
         return ProductPayload(
             title=title.strip(),

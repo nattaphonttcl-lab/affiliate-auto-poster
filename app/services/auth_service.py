@@ -5,7 +5,9 @@ from app.repositories.user_repository import UserRepositoryProtocol
 
 
 class AuthService:
-    def __init__(self, user_repository: UserRepositoryProtocol, settings: Settings) -> None:
+    def __init__(
+        self, user_repository: UserRepositoryProtocol, settings: Settings
+    ) -> None:
         self._user_repository = user_repository
         self._settings = settings
 

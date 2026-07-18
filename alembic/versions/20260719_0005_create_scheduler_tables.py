@@ -19,8 +19,18 @@ def upgrade() -> None:
     op.create_table(
         "scheduled_posts",
         sa.Column("id", sa.Integer(), primary_key=True),
-        sa.Column("product_id", sa.Integer(), sa.ForeignKey("products.id", ondelete="CASCADE"), nullable=False),
-        sa.Column("caption_batch_id", sa.Integer(), sa.ForeignKey("caption_batches.id", ondelete="SET NULL"), nullable=True),
+        sa.Column(
+            "product_id",
+            sa.Integer(),
+            sa.ForeignKey("products.id", ondelete="CASCADE"),
+            nullable=False,
+        ),
+        sa.Column(
+            "caption_batch_id",
+            sa.Integer(),
+            sa.ForeignKey("caption_batches.id", ondelete="SET NULL"),
+            nullable=True,
+        ),
         sa.Column(
             "promotional_image_id",
             sa.Integer(),
@@ -33,25 +43,69 @@ def upgrade() -> None:
         sa.Column("status", sa.String(length=24), nullable=False),
         sa.Column("published_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("error_message", sa.Text(), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.func.now(),
+            nullable=False,
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.func.now(),
+            nullable=False,
+        ),
     )
     op.create_index("ix_scheduled_posts_id", "scheduled_posts", ["id"], unique=False)
-    op.create_index("ix_scheduled_posts_product_id", "scheduled_posts", ["product_id"], unique=False)
-    op.create_index("ix_scheduled_posts_caption_batch_id", "scheduled_posts", ["caption_batch_id"], unique=False)
-    op.create_index("ix_scheduled_posts_promotional_image_id", "scheduled_posts", ["promotional_image_id"], unique=False)
-    op.create_index("ix_scheduled_posts_scheduled_for", "scheduled_posts", ["scheduled_for"], unique=False)
-    op.create_index("ix_scheduled_posts_status", "scheduled_posts", ["status"], unique=False)
+    op.create_index(
+        "ix_scheduled_posts_product_id", "scheduled_posts", ["product_id"], unique=False
+    )
+    op.create_index(
+        "ix_scheduled_posts_caption_batch_id",
+        "scheduled_posts",
+        ["caption_batch_id"],
+        unique=False,
+    )
+    op.create_index(
+        "ix_scheduled_posts_promotional_image_id",
+        "scheduled_posts",
+        ["promotional_image_id"],
+        unique=False,
+    )
+    op.create_index(
+        "ix_scheduled_posts_scheduled_for",
+        "scheduled_posts",
+        ["scheduled_for"],
+        unique=False,
+    )
+    op.create_index(
+        "ix_scheduled_posts_status", "scheduled_posts", ["status"], unique=False
+    )
 
     op.create_table(
         "scheduled_post_executions",
         sa.Column("id", sa.Integer(), primary_key=True),
-        sa.Column("scheduled_post_id", sa.Integer(), sa.ForeignKey("scheduled_posts.id", ondelete="CASCADE"), nullable=False),
+        sa.Column(
+            "scheduled_post_id",
+            sa.Integer(),
+            sa.ForeignKey("scheduled_posts.id", ondelete="CASCADE"),
+            nullable=False,
+        ),
         sa.Column("status", sa.String(length=24), nullable=False),
         sa.Column("message", sa.Text(), nullable=False),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.func.now(),
+            nullable=False,
+        ),
     )
-    op.create_index("ix_scheduled_post_executions_id", "scheduled_post_executions", ["id"], unique=False)
+    op.create_index(
+        "ix_scheduled_post_executions_id",
+        "scheduled_post_executions",
+        ["id"],
+        unique=False,
+    )
     op.create_index(
         "ix_scheduled_post_executions_scheduled_post_id",
         "scheduled_post_executions",
@@ -61,13 +115,20 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.drop_index("ix_scheduled_post_executions_scheduled_post_id", table_name="scheduled_post_executions")
-    op.drop_index("ix_scheduled_post_executions_id", table_name="scheduled_post_executions")
+    op.drop_index(
+        "ix_scheduled_post_executions_scheduled_post_id",
+        table_name="scheduled_post_executions",
+    )
+    op.drop_index(
+        "ix_scheduled_post_executions_id", table_name="scheduled_post_executions"
+    )
     op.drop_table("scheduled_post_executions")
 
     op.drop_index("ix_scheduled_posts_status", table_name="scheduled_posts")
     op.drop_index("ix_scheduled_posts_scheduled_for", table_name="scheduled_posts")
-    op.drop_index("ix_scheduled_posts_promotional_image_id", table_name="scheduled_posts")
+    op.drop_index(
+        "ix_scheduled_posts_promotional_image_id", table_name="scheduled_posts"
+    )
     op.drop_index("ix_scheduled_posts_caption_batch_id", table_name="scheduled_posts")
     op.drop_index("ix_scheduled_posts_product_id", table_name="scheduled_posts")
     op.drop_index("ix_scheduled_posts_id", table_name="scheduled_posts")

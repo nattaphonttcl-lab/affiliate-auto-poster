@@ -1,5 +1,9 @@
 from app.repositories.analytics_repository import AnalyticsRepository
-from app.schemas.analytics import AnalyticsEventRead, AnalyticsEventsResponse, AnalyticsOverviewResponse
+from app.schemas.analytics import (
+    AnalyticsEventRead,
+    AnalyticsEventsResponse,
+    AnalyticsOverviewResponse,
+)
 
 
 class AnalyticsService:

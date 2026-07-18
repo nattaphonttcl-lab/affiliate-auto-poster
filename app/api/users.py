@@ -7,9 +7,18 @@ from app.services.user_service import UserService
 router = APIRouter(prefix="/users", tags=["users"])
 
 
-@router.post("", response_model=UserRead, status_code=status.HTTP_201_CREATED, summary="Create user")
-def create_user(payload: UserCreate, user_service: UserService = Depends(get_user_service)) -> UserRead:
-    return UserRead.model_validate(user_service.create_user(email=payload.email, password=payload.password))
+@router.post(
+    "",
+    response_model=UserRead,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create user",
+)
+def create_user(
+    payload: UserCreate, user_service: UserService = Depends(get_user_service)
+) -> UserRead:
+    return UserRead.model_validate(
+        user_service.create_user(email=payload.email, password=payload.password)
+    )
 
 
 @router.get("", response_model=list[UserRead], summary="List users")

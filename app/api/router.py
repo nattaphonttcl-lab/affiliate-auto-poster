@@ -1,6 +1,16 @@
 from fastapi import APIRouter
 
-from app.api import analytics, auth, captions, dashboard, health, images, products, scheduler, users
+from app.api import (
+    analytics,
+    auth,
+    captions,
+    dashboard,
+    health,
+    images,
+    products,
+    scheduler,
+    users,
+)
 
 api_router = APIRouter()
 api_router.include_router(health.router)

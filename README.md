@@ -105,6 +105,8 @@ backend/
 - Scheduler: schedule storage -> due-job executor -> publisher adapter (audit/webhook) -> execution logs.
 - Dashboard: aggregated operational KPIs and recent activity feed across products, captions, images, and scheduler.
 - Analytics: event tracking with aggregated overview metrics and event timeline APIs.
+- Scheduler aggregate uses optimistic locking via `scheduled_posts.version` for safe concurrent state transitions.
+- Domain events are captured in an Outbox table (`outbox_events`) for reliable asynchronous publication.
 
 ## Local Setup
 
@@ -175,6 +177,16 @@ docker compose up --build
 pytest -q
 ```
 
+## Validation Commands
+
+```bash
+ruff check .
+black --check .
+pytest -q --cov=app --cov-report=term-missing
+alembic upgrade head
+python -m compileall app tests alembic
+```
+
 ## Shopee Product Service
 
 - Input: Shopee product URL.
@@ -208,6 +220,8 @@ pytest -q
 - Explicit user confirmation is required before any scheduled post can be executed.
 - Confirmation is idempotent and writes audit entries to `scheduled_post_audits`.
 - State machine: `awaiting_confirmation -> confirmed -> processing -> published|failed`.
+- Optimistic locking: every transition validates `version` and increments it on success.
+- Outbox pattern: every scheduler domain event (`created`, `confirmed`, `published`, `failed`) is persisted to `outbox_events` in the same transaction.
 - Run due jobs via API-triggered executor for deterministic operations and worker-safe claim semantics.
 - Publisher modes:
 	- `audit`: marks scheduled posts as published and logs execution.
@@ -238,5 +252,23 @@ pytest -q
 ## Logging
 
 - Configurable log level via `LOG_LEVEL`.
-- HTTP request logs include method, path, status code, and latency.
+- Structured JSON logging enabled by default (`LOG_JSON=true`).
+- HTTP request logs include method, path, status code, latency, request id, and trace/span ids.
+
+## Tracing
+
+- OpenTelemetry tracing is supported and enabled by default (`TRACING_ENABLED=true`).
+- FastAPI and SQLAlchemy are instrumented automatically on app startup.
+- Configure service identity and exporter target with:
+	- `TRACING_SERVICE_NAME`
+	- `TRACING_OTLP_ENDPOINT` (optional; falls back to console exporter when empty)
+
+## CI
+
+- GitHub Actions workflow at `.github/workflows/ci.yml` runs:
+	- Ruff
+	- Black
+	- Pytest + coverage
+	- Bandit
+	- Docker image build
 

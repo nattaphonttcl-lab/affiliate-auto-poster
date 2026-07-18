@@ -101,11 +101,41 @@ class AICaptionEngine:
     }
 
     _hashtags: dict[CaptionStyle, list[str]] = {
-        CaptionStyle.FUNNY: ["#ShopeeFinds", "#AddToCart", "#WorthIt", "#DailyDeals", "#SmartShopping"],
-        CaptionStyle.REVIEW: ["#ProductReview", "#TopRated", "#BuyerFavorite", "#ShopSmart", "#ShopeeFinds"],
-        CaptionStyle.PROMOTION: ["#Promo", "#Discount", "#DealAlert", "#BestPrice", "#LimitedOffer"],
-        CaptionStyle.STORYTELLING: ["#CustomerStory", "#LifestyleUpgrade", "#DailyEssential", "#ShopNow", "#Shopee"],
-        CaptionStyle.URGENCY: ["#BuyNow", "#LastChance", "#HurryUp", "#FlashDeal", "#ShopeeDeals"],
+        CaptionStyle.FUNNY: [
+            "#ShopeeFinds",
+            "#AddToCart",
+            "#WorthIt",
+            "#DailyDeals",
+            "#SmartShopping",
+        ],
+        CaptionStyle.REVIEW: [
+            "#ProductReview",
+            "#TopRated",
+            "#BuyerFavorite",
+            "#ShopSmart",
+            "#ShopeeFinds",
+        ],
+        CaptionStyle.PROMOTION: [
+            "#Promo",
+            "#Discount",
+            "#DealAlert",
+            "#BestPrice",
+            "#LimitedOffer",
+        ],
+        CaptionStyle.STORYTELLING: [
+            "#CustomerStory",
+            "#LifestyleUpgrade",
+            "#DailyEssential",
+            "#ShopNow",
+            "#Shopee",
+        ],
+        CaptionStyle.URGENCY: [
+            "#BuyNow",
+            "#LastChance",
+            "#HurryUp",
+            "#FlashDeal",
+            "#ShopeeDeals",
+        ],
     }
 
     def get_prompt_template(self, style: CaptionStyle) -> str:

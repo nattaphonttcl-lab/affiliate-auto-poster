@@ -31,8 +31,18 @@ def upgrade() -> None:
         sa.Column("category", sa.String(length=255), nullable=True),
         sa.Column("affiliate_url", sa.String(length=2048), nullable=False),
         sa.Column("expires_at", sa.DateTime(timezone=True), nullable=False),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.func.now(),
+            nullable=False,
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.func.now(),
+            nullable=False,
+        ),
     )
     op.create_index("ix_products_source_url", "products", ["source_url"], unique=True)
     op.create_index("ix_products_expires_at", "products", ["expires_at"], unique=False)

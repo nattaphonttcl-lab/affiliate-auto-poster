@@ -9,8 +9,16 @@ from sqlalchemy.pool import StaticPool
 from app.api.dependencies import get_db_session, get_shopee_product_service
 from app.core.config import get_settings
 from app.db.base import Base
-from app.main import app
-from app.models import analytics_event, caption, product, promotional_image, scheduled_post, user  # noqa: F401
+from app.main import app as fastapi_app
+
+# Import model modules for SQLAlchemy metadata registration.
+import app.models.analytics_event  # noqa: F401
+import app.models.caption  # noqa: F401
+import app.models.outbox_event  # noqa: F401
+import app.models.product  # noqa: F401
+import app.models.promotional_image  # noqa: F401
+import app.models.scheduled_post  # noqa: F401
+import app.models.user  # noqa: F401
 from app.repositories.product_repository import ProductRepository
 from app.schemas.product import ProductPayload
 from app.services.shopee_product_service import ShopeeProductService
@@ -23,7 +31,9 @@ def db_session() -> Generator[Session, None, None]:
         connect_args={"check_same_thread": False},
         poolclass=StaticPool,
     )
-    TestingSessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, class_=Session)
+    TestingSessionLocal = sessionmaker(
+        bind=engine, autoflush=False, autocommit=False, class_=Session
+    )
     Base.metadata.create_all(bind=engine)
 
     db = TestingSessionLocal()
@@ -39,12 +49,12 @@ def client(db_session: Session) -> Generator[TestClient, None, None]:
     def override_get_db_session() -> Generator[Session, None, None]:
         yield db_session
 
-    app.dependency_overrides[get_db_session] = override_get_db_session
+    fastapi_app.dependency_overrides[get_db_session] = override_get_db_session
 
-    with TestClient(app) as test_client:
+    with TestClient(fastapi_app) as test_client:
         yield test_client
 
-    app.dependency_overrides.clear()
+    fastapi_app.dependency_overrides.clear()
 
 
 class _StaticParser:
@@ -72,14 +82,20 @@ class _PassValidator:
 
 
 @pytest.fixture()
-def shopee_service_with_static_parser(client: TestClient, db_session: Session) -> Generator[ShopeeProductService, None, None]:
+def shopee_service_with_static_parser(
+    client: TestClient, db_session: Session
+) -> Generator[ShopeeProductService, None, None]:
     settings = get_settings()
-    service = ShopeeProductService(ProductRepository(db_session), _StaticParser(), _PassValidator(), settings)
+    service = ShopeeProductService(
+        ProductRepository(db_session), _StaticParser(), _PassValidator(), settings
+    )
 
     def override_shopee_service() -> ShopeeProductService:
         return service
 
-    client.app.dependency_overrides[get_shopee_product_service] = override_shopee_service
+    client.app.dependency_overrides[get_shopee_product_service] = (
+        override_shopee_service
+    )
     try:
         yield service
     finally:

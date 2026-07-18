@@ -7,7 +7,12 @@ from app.services.shopee_product_service import ShopeeProductService
 router = APIRouter(prefix="/products", tags=["products"])
 
 
-@router.post("/shopee", response_model=ProductRead, status_code=status.HTTP_200_OK, summary="Parse Shopee product")
+@router.post(
+    "/shopee",
+    response_model=ProductRead,
+    status_code=status.HTTP_200_OK,
+    summary="Parse Shopee product",
+)
 def parse_shopee_product(
     payload: ShopeeProductRequest,
     _: int = Depends(get_current_user_id),

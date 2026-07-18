@@ -13,6 +13,25 @@ from app.services.scheduler_service import SchedulerService
 router = APIRouter(prefix="/scheduler", tags=["scheduler"])
 
 
+def _to_scheduled_post_read(item) -> ScheduledPostRead:
+    return ScheduledPostRead(
+        id=item.id,
+        version=item.version,
+        owner_user_id=item.owner_user_id,
+        product_id=item.product_id,
+        caption_batch_id=item.caption_batch_id,
+        promotional_image_id=item.promotional_image_id,
+        platform=SchedulePlatform(item.platform),
+        target=item.target,
+        scheduled_for=item.scheduled_for,
+        state=ScheduledPostState(item.state),
+        published_at=item.published_at,
+        error_message=item.error_message,
+        created_at=item.created_at,
+        updated_at=item.updated_at,
+    )
+
+
 @router.post(
     "/posts",
     response_model=ScheduledPostRead,
@@ -35,21 +54,7 @@ def create_scheduled_post(
         scheduled_for=payload.scheduled_for,
     )
 
-    return ScheduledPostRead(
-        id=created.id,
-        owner_user_id=created.owner_user_id,
-        product_id=created.product_id,
-        caption_batch_id=created.caption_batch_id,
-        promotional_image_id=created.promotional_image_id,
-        platform=SchedulePlatform(created.platform),
-        target=created.target,
-        scheduled_for=created.scheduled_for,
-        state=ScheduledPostState(created.state),
-        published_at=created.published_at,
-        error_message=created.error_message,
-        created_at=created.created_at,
-        updated_at=created.updated_at,
-    )
+    return _to_scheduled_post_read(created)
 
 
 @router.post(
@@ -82,21 +87,7 @@ def confirm_scheduled_post(
     item = service.confirm_post(
         scheduled_post_id=scheduled_post_id, actor_user_id=current_user_id
     )
-    return ScheduledPostRead(
-        id=item.id,
-        owner_user_id=item.owner_user_id,
-        product_id=item.product_id,
-        caption_batch_id=item.caption_batch_id,
-        promotional_image_id=item.promotional_image_id,
-        platform=SchedulePlatform(item.platform),
-        target=item.target,
-        scheduled_for=item.scheduled_for,
-        state=ScheduledPostState(item.state),
-        published_at=item.published_at,
-        error_message=item.error_message,
-        created_at=item.created_at,
-        updated_at=item.updated_at,
-    )
+    return _to_scheduled_post_read(item)
 
 
 @router.get(
@@ -111,21 +102,4 @@ def list_recent_scheduled_posts(
     service: SchedulerService = Depends(get_scheduler_service),
 ) -> list[ScheduledPostRead]:
     rows = service.list_recent(owner_user_id=current_user_id, limit=20)
-    return [
-        ScheduledPostRead(
-            id=item.id,
-            owner_user_id=item.owner_user_id,
-            product_id=item.product_id,
-            caption_batch_id=item.caption_batch_id,
-            promotional_image_id=item.promotional_image_id,
-            platform=SchedulePlatform(item.platform),
-            target=item.target,
-            scheduled_for=item.scheduled_for,
-            state=ScheduledPostState(item.state),
-            published_at=item.published_at,
-            error_message=item.error_message,
-            created_at=item.created_at,
-            updated_at=item.updated_at,
-        )
-        for item in rows
-    ]
+    return [_to_scheduled_post_read(item) for item in rows]

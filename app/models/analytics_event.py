@@ -19,4 +19,6 @@ class AnalyticsEvent(Base):
         nullable=False,
         default=dict,
     )
-    occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False, index=True)
+    occurred_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False, index=True
+    )

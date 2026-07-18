@@ -20,7 +20,9 @@ class CaptionService:
         self._engine = engine
         self._analytics_repository = analytics_repository
 
-    def generate_for_product(self, *, product_id: int, style: CaptionStyle) -> tuple[CaptionBatch, list[Caption]]:
+    def generate_for_product(
+        self, *, product_id: int, style: CaptionStyle
+    ) -> tuple[CaptionBatch, list[Caption]]:
         product = self._product_repository.get_by_id(product_id)
         if product is None:
             raise AppException(status_code=404, detail="Product not found")
@@ -40,7 +42,11 @@ class CaptionService:
                 event_type="caption_generated",
                 entity_type="caption_batch",
                 entity_id=batch.id,
-                metadata={"product_id": product.id, "style": style.value, "count": len(captions)},
+                metadata={
+                    "product_id": product.id,
+                    "style": style.value,
+                    "count": len(captions),
+                },
             )
 
         return batch, captions

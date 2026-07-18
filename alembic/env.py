@@ -7,7 +7,15 @@ from sqlalchemy import engine_from_config, pool
 
 from app.core.config import get_settings
 from app.db.base import Base
-from app.models import analytics_event, caption, product, promotional_image, scheduled_post, user  # noqa: F401
+
+# Import model modules for SQLAlchemy metadata registration.
+import app.models.analytics_event  # noqa: F401
+import app.models.caption  # noqa: F401
+import app.models.outbox_event  # noqa: F401
+import app.models.product  # noqa: F401
+import app.models.promotional_image  # noqa: F401
+import app.models.scheduled_post  # noqa: F401
+import app.models.user  # noqa: F401
 
 config = context.config
 settings = get_settings()
@@ -41,7 +49,9 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
-        context.configure(connection=connection, target_metadata=target_metadata, compare_type=True)
+        context.configure(
+            connection=connection, target_metadata=target_metadata, compare_type=True
+        )
 
         with context.begin_transaction():
             context.run_migrations()

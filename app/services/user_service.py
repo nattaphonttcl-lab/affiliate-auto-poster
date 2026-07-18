@@ -13,7 +13,9 @@ class UserService:
         if existing:
             raise AppException(status_code=409, detail="Email is already registered")
 
-        return self._user_repository.create(email=email, hashed_password=hash_password(password))
+        return self._user_repository.create(
+            email=email, hashed_password=hash_password(password)
+        )
 
     def list_users(self) -> list[User]:
         return self._user_repository.list()

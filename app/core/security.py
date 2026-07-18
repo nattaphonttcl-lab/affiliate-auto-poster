@@ -24,7 +24,9 @@ def create_access_token(*, subject: str, settings: Settings) -> str:
 
 def decode_access_token(*, token: str, settings: Settings) -> str | None:
     try:
-        payload = jwt.decode(token, settings.secret_key, algorithms=[settings.jwt_algorithm])
+        payload = jwt.decode(
+            token, settings.secret_key, algorithms=[settings.jwt_algorithm]
+        )
     except JWTError:
         return None
 

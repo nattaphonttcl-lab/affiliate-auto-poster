@@ -18,17 +18,29 @@ depends_on = None
 def upgrade() -> None:
     op.add_column(
         "scheduled_posts",
-        sa.Column("requires_confirmation", sa.Boolean(), nullable=False, server_default=sa.true()),
+        sa.Column(
+            "requires_confirmation",
+            sa.Boolean(),
+            nullable=False,
+            server_default=sa.true(),
+        ),
     )
     op.add_column(
         "scheduled_posts",
-        sa.Column("is_confirmed", sa.Boolean(), nullable=False, server_default=sa.false()),
+        sa.Column(
+            "is_confirmed", sa.Boolean(), nullable=False, server_default=sa.false()
+        ),
     )
     op.add_column(
         "scheduled_posts",
         sa.Column("confirmed_at", sa.DateTime(timezone=True), nullable=True),
     )
-    op.create_index("ix_scheduled_posts_is_confirmed", "scheduled_posts", ["is_confirmed"], unique=False)
+    op.create_index(
+        "ix_scheduled_posts_is_confirmed",
+        "scheduled_posts",
+        ["is_confirmed"],
+        unique=False,
+    )
 
 
 def downgrade() -> None:

@@ -4,12 +4,18 @@ from typing import Protocol
 from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
+from app.core.domain_events import DomainEvent
+from app.models.outbox_event import OutboxEvent
 from app.models.scheduled_post import (
     ScheduledPost,
     ScheduledPostAudit,
     ScheduledPostExecution,
 )
 from app.schemas.scheduler import ScheduledPostState
+
+
+class OptimisticLockError(Exception):
+    pass
 
 
 class SchedulerRepositoryProtocol(Protocol):
@@ -38,8 +44,10 @@ class SchedulerRepositoryProtocol(Protocol):
     def update_status(
         self,
         *,
-        scheduled_post: ScheduledPost,
+        scheduled_post_id: int,
+        expected_version: int,
         state: str,
+        from_state: str | None = None,
         error_message: str | None = None,
         published_at: datetime | None = None,
     ) -> ScheduledPost: ...
@@ -49,8 +57,14 @@ class SchedulerRepositoryProtocol(Protocol):
     ) -> ScheduledPostExecution: ...
 
     def confirm_if_awaiting(
-        self, *, scheduled_post: ScheduledPost
+        self, *, scheduled_post_id: int, expected_version: int
     ) -> ScheduledPost: ...
+
+    def enqueue_domain_event(self, *, event: DomainEvent) -> OutboxEvent: ...
+
+    def commit(self) -> None: ...
+
+    def rollback(self) -> None: ...
 
     def create_audit(
         self,
@@ -92,7 +106,7 @@ class SchedulerRepository(SchedulerRepositoryProtocol):
             state=ScheduledPostState.AWAITING_CONFIRMATION.value,
         )
         self._db.add(scheduled_post)
-        self._db.commit()
+        self._db.flush()
         self._db.refresh(scheduled_post)
         return scheduled_post
 
@@ -114,7 +128,7 @@ class SchedulerRepository(SchedulerRepositoryProtocol):
         self, *, owner_user_id: int, now: datetime, limit: int = 50
     ) -> list[ScheduledPost]:
         stmt = (
-            select(ScheduledPost.id)
+            select(ScheduledPost.id, ScheduledPost.version)
             .where(
                 ScheduledPost.owner_user_id == owner_user_id,
                 ScheduledPost.state == ScheduledPostState.CONFIRMED.value,
@@ -123,26 +137,30 @@ class SchedulerRepository(SchedulerRepositoryProtocol):
             .order_by(ScheduledPost.scheduled_for.asc())
             .limit(limit)
         )
-        candidates = [row for row in self._db.scalars(stmt)]
+        candidates = list(self._db.execute(stmt).all())
 
         claimed_ids: list[int] = []
-        for candidate_id in candidates:
+        for candidate_id, candidate_version in candidates:
             claim_stmt = (
                 update(ScheduledPost)
                 .where(
                     ScheduledPost.id == candidate_id,
+                    ScheduledPost.version == candidate_version,
                     ScheduledPost.state == ScheduledPostState.CONFIRMED.value,
                 )
-                .values(state=ScheduledPostState.PROCESSING.value)
+                .values(
+                    state=ScheduledPostState.PROCESSING.value,
+                    version=ScheduledPost.version + 1,
+                )
             )
             result = self._db.execute(claim_stmt)
-            self._db.commit()
             if result.rowcount == 1:
                 claimed_ids.append(candidate_id)
 
         if not claimed_ids:
             return []
 
+        self._db.flush()
         fetch_stmt = (
             select(ScheduledPost)
             .where(ScheduledPost.id.in_(claimed_ids))
@@ -153,19 +171,41 @@ class SchedulerRepository(SchedulerRepositoryProtocol):
     def update_status(
         self,
         *,
-        scheduled_post: ScheduledPost,
+        scheduled_post_id: int,
+        expected_version: int,
         state: str,
+        from_state: str | None = None,
         error_message: str | None = None,
         published_at: datetime | None = None,
     ) -> ScheduledPost:
-        scheduled_post.state = state
-        scheduled_post.error_message = error_message
+        values: dict[str, object | None] = {
+            "state": state,
+            "version": expected_version + 1,
+            "error_message": error_message,
+        }
         if published_at is not None:
-            scheduled_post.published_at = published_at
+            values["published_at"] = published_at
 
-        self._db.add(scheduled_post)
-        self._db.commit()
-        self._db.refresh(scheduled_post)
+        stmt = update(ScheduledPost).where(
+            ScheduledPost.id == scheduled_post_id,
+            ScheduledPost.version == expected_version,
+        )
+        if from_state is not None:
+            stmt = stmt.where(ScheduledPost.state == from_state)
+        stmt = stmt.values(**values)
+
+        result = self._db.execute(stmt)
+        if result.rowcount != 1:
+            raise OptimisticLockError(
+                f"Optimistic lock failed for scheduled_post_id={scheduled_post_id} version={expected_version}"
+            )
+
+        self._db.flush()
+        scheduled_post = self._db.get(ScheduledPost, scheduled_post_id)
+        if scheduled_post is None:
+            raise OptimisticLockError(
+                f"Scheduled post disappeared during optimistic update: {scheduled_post_id}"
+            )
         return scheduled_post
 
     def create_execution(
@@ -177,26 +217,19 @@ class SchedulerRepository(SchedulerRepositoryProtocol):
             message=message,
         )
         self._db.add(execution)
-        self._db.commit()
+        self._db.flush()
         self._db.refresh(execution)
         return execution
 
-    def confirm_if_awaiting(self, *, scheduled_post: ScheduledPost) -> ScheduledPost:
-        if scheduled_post.state != ScheduledPostState.AWAITING_CONFIRMATION.value:
-            return scheduled_post
-
-        stmt = (
-            update(ScheduledPost)
-            .where(
-                ScheduledPost.id == scheduled_post.id,
-                ScheduledPost.state == ScheduledPostState.AWAITING_CONFIRMATION.value,
-            )
-            .values(state=ScheduledPostState.CONFIRMED.value)
+    def confirm_if_awaiting(
+        self, *, scheduled_post_id: int, expected_version: int
+    ) -> ScheduledPost:
+        return self.update_status(
+            scheduled_post_id=scheduled_post_id,
+            expected_version=expected_version,
+            from_state=ScheduledPostState.AWAITING_CONFIRMATION.value,
+            state=ScheduledPostState.CONFIRMED.value,
         )
-        self._db.execute(stmt)
-        self._db.commit()
-        self._db.refresh(scheduled_post)
-        return scheduled_post
 
     def create_audit(
         self,
@@ -217,9 +250,30 @@ class SchedulerRepository(SchedulerRepositoryProtocol):
             message=message,
         )
         self._db.add(audit)
-        self._db.commit()
+        self._db.flush()
         self._db.refresh(audit)
         return audit
+
+    def enqueue_domain_event(self, *, event: DomainEvent) -> OutboxEvent:
+        outbox_event = OutboxEvent(
+            aggregate_type=event.aggregate_type,
+            aggregate_id=event.aggregate_id,
+            event_type=event.event_type,
+            payload=event.payload,
+            status="pending",
+            attempts=0,
+            occurred_at=event.occurred_at,
+        )
+        self._db.add(outbox_event)
+        self._db.flush()
+        self._db.refresh(outbox_event)
+        return outbox_event
+
+    def commit(self) -> None:
+        self._db.commit()
+
+    def rollback(self) -> None:
+        self._db.rollback()
 
     def count_by_status(self) -> dict[str, int]:
         stmt = select(ScheduledPost.state, func.count(ScheduledPost.id)).group_by(

@@ -73,6 +73,7 @@ def _seed_dashboard_data(db_session: Session, owner_user_id: int) -> None:
         target="fb-page-1",
         scheduled_for=now + timedelta(hours=1),
         state="awaiting_confirmation",
+        version=1,
     )
     db_session.add(scheduled_post)
     db_session.commit()

@@ -23,7 +23,11 @@ from app.services.shopee_product_service import ShopeeProductService
 from app.services.user_service import UserService
 from app.utils.ai_caption_engine import AICaptionEngine
 from app.utils.image_generator_engine import ImageGeneratorEngine
-from app.utils.post_publisher import AuditPostPublisher, PostPublisherProtocol, WebhookPostPublisher
+from app.utils.post_publisher import (
+    AuditPostPublisher,
+    PostPublisherProtocol,
+    WebhookPostPublisher,
+)
 from app.utils.shopee_parser import ShopeeProductParser
 from app.utils.shopee_validator import ShopeeProductValidator
 
@@ -38,7 +42,9 @@ def get_user_service(db: Session = Depends(get_db_session)) -> UserService:
     return UserService(UserRepository(db))
 
 
-def get_analytics_repository(db: Session = Depends(get_db_session)) -> AnalyticsRepository:
+def get_analytics_repository(
+    db: Session = Depends(get_db_session),
+) -> AnalyticsRepository:
     return AnalyticsRepository(db)
 
 
@@ -55,9 +61,13 @@ def get_shopee_product_service(
     analytics_repository: AnalyticsRepository = Depends(get_analytics_repository),
 ) -> ShopeeProductService:
     repository = ProductRepository(db)
-    parser = ShopeeProductParser(timeout_seconds=settings.shopee_request_timeout_seconds)
+    parser = ShopeeProductParser(
+        timeout_seconds=settings.shopee_request_timeout_seconds
+    )
     validator = ShopeeProductValidator()
-    return ShopeeProductService(repository, parser, validator, settings, analytics_repository)
+    return ShopeeProductService(
+        repository, parser, validator, settings, analytics_repository
+    )
 
 
 def get_caption_service(
@@ -67,7 +77,9 @@ def get_caption_service(
     product_repository = ProductRepository(db)
     caption_repository = CaptionRepository(db)
     engine = AICaptionEngine()
-    return CaptionService(product_repository, caption_repository, engine, analytics_repository)
+    return CaptionService(
+        product_repository, caption_repository, engine, analytics_repository
+    )
 
 
 def get_image_service(
@@ -81,7 +93,9 @@ def get_image_service(
         output_dir=settings.image_output_dir,
         timeout_seconds=settings.image_request_timeout_seconds,
     )
-    return ImageService(product_repository, image_repository, generator, analytics_repository)
+    return ImageService(
+        product_repository, image_repository, generator, analytics_repository
+    )
 
 
 def get_scheduler_service(
@@ -94,7 +108,10 @@ def get_scheduler_service(
     publisher: PostPublisherProtocol
     if settings.scheduler_publisher_mode.lower() == "webhook":
         if not settings.scheduler_webhook_url:
-            raise AppException(status_code=500, detail="Scheduler webhook URL is required when publisher mode is webhook")
+            raise AppException(
+                status_code=500,
+                detail="Scheduler webhook URL is required when publisher mode is webhook",
+            )
         publisher = WebhookPostPublisher(
             webhook_url=settings.scheduler_webhook_url,
             timeout_seconds=settings.scheduler_webhook_timeout_seconds,

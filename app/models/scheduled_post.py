@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, String, Text, func
+from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -35,6 +35,12 @@ class ScheduledPost(Base):
     )
     state: Mapped[str] = mapped_column(
         String(32), nullable=False, default="awaiting_confirmation", index=True
+    )
+    version: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=1,
+        server_default="1",
     )
     published_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True

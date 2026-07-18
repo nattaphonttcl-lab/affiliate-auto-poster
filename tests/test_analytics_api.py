@@ -5,7 +5,10 @@ from app.models.analytics_event import AnalyticsEvent
 
 
 def _create_user_and_token(client: TestClient) -> str:
-    client.post("/api/v1/users", json={"email": "analytics@example.com", "password": "StrongPass123"})
+    client.post(
+        "/api/v1/users",
+        json={"email": "analytics@example.com", "password": "StrongPass123"},
+    )
     login_response = client.post(
         "/api/v1/auth/login",
         json={"email": "analytics@example.com", "password": "StrongPass123"},
@@ -15,10 +18,30 @@ def _create_user_and_token(client: TestClient) -> str:
 
 def _seed_events(db_session: Session) -> None:
     events = [
-        AnalyticsEvent(event_type="product_parsed", entity_type="product", entity_id=1, event_metadata={"source": "shopee"}),
-        AnalyticsEvent(event_type="caption_generated", entity_type="caption_batch", entity_id=1, event_metadata={"style": "promotion"}),
-        AnalyticsEvent(event_type="image_generated", entity_type="promotional_image", entity_id=1, event_metadata={"template": "classic"}),
-        AnalyticsEvent(event_type="scheduled_post_created", entity_type="scheduled_post", entity_id=1, event_metadata={"target": "fb-page"}),
+        AnalyticsEvent(
+            event_type="product_parsed",
+            entity_type="product",
+            entity_id=1,
+            event_metadata={"source": "shopee"},
+        ),
+        AnalyticsEvent(
+            event_type="caption_generated",
+            entity_type="caption_batch",
+            entity_id=1,
+            event_metadata={"style": "promotion"},
+        ),
+        AnalyticsEvent(
+            event_type="image_generated",
+            entity_type="promotional_image",
+            entity_id=1,
+            event_metadata={"template": "classic"},
+        ),
+        AnalyticsEvent(
+            event_type="scheduled_post_created",
+            entity_type="scheduled_post",
+            entity_id=1,
+            event_metadata={"target": "fb-page"},
+        ),
     ]
     for event in events:
         db_session.add(event)

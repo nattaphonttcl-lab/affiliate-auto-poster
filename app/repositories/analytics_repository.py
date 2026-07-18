@@ -64,5 +64,9 @@ class AnalyticsRepository(AnalyticsRepositoryProtocol):
         return [{"day": str(day), "count": int(count)} for day, count in rows]
 
     def recent_events(self, *, limit: int) -> list[AnalyticsEvent]:
-        stmt = select(AnalyticsEvent).order_by(AnalyticsEvent.occurred_at.desc()).limit(limit)
+        stmt = (
+            select(AnalyticsEvent)
+            .order_by(AnalyticsEvent.occurred_at.desc())
+            .limit(limit)
+        )
         return list(self._db.scalars(stmt))

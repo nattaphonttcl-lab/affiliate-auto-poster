@@ -43,11 +43,15 @@ def _create_user_and_token(client: TestClient) -> str:
     return login_response.json()["access_token"]
 
 
-def test_shopee_product_endpoint_uses_cache(client: TestClient, db_session: Session) -> None:
+def test_shopee_product_endpoint_uses_cache(
+    client: TestClient, db_session: Session
+) -> None:
     parser = CountingParser()
     settings = get_settings()
     repository = ProductRepository(db_session)
-    service = ShopeeProductService(repository, parser, ShopeeProductValidator(), settings)
+    service = ShopeeProductService(
+        repository, parser, ShopeeProductValidator(), settings
+    )
 
     def override_service() -> ShopeeProductService:
         return service
@@ -59,8 +63,12 @@ def test_shopee_product_endpoint_uses_cache(client: TestClient, db_session: Sess
         headers = {"Authorization": f"Bearer {token}"}
         payload = {"url": "https://shopee.co.id/product/123"}
 
-        first_response = client.post("/api/v1/products/shopee", json=payload, headers=headers)
-        second_response = client.post("/api/v1/products/shopee", json=payload, headers=headers)
+        first_response = client.post(
+            "/api/v1/products/shopee", json=payload, headers=headers
+        )
+        second_response = client.post(
+            "/api/v1/products/shopee", json=payload, headers=headers
+        )
 
         assert first_response.status_code == 200
         assert second_response.status_code == 200
