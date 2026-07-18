@@ -7,13 +7,16 @@ from app.core.exceptions import AppException
 from app.core.security import decode_access_token
 from app.db.session import get_db_session
 from app.repositories.caption_repository import CaptionRepository
+from app.repositories.image_repository import ImageRepository
 from app.repositories.product_repository import ProductRepository
 from app.repositories.user_repository import UserRepository
 from app.services.auth_service import AuthService
 from app.services.caption_service import CaptionService
+from app.services.image_service import ImageService
 from app.services.shopee_product_service import ShopeeProductService
 from app.services.user_service import UserService
 from app.utils.ai_caption_engine import AICaptionEngine
+from app.utils.image_generator_engine import ImageGeneratorEngine
 from app.utils.shopee_parser import ShopeeProductParser
 from app.utils.shopee_validator import ShopeeProductValidator
 
@@ -50,6 +53,19 @@ def get_caption_service(db: Session = Depends(get_db_session)) -> CaptionService
     caption_repository = CaptionRepository(db)
     engine = AICaptionEngine()
     return CaptionService(product_repository, caption_repository, engine)
+
+
+def get_image_service(
+    db: Session = Depends(get_db_session),
+    settings: Settings = Depends(get_settings_dependency),
+) -> ImageService:
+    product_repository = ProductRepository(db)
+    image_repository = ImageRepository(db)
+    generator = ImageGeneratorEngine(
+        output_dir=settings.image_output_dir,
+        timeout_seconds=settings.image_request_timeout_seconds,
+    )
+    return ImageService(product_repository, image_repository, generator)
 
 
 def get_current_user_id(

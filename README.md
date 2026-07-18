@@ -25,6 +25,7 @@ backend/
 			captions.py
 			dependencies.py
 			health.py
+			images.py
 			products.py
 			router.py
 			users.py
@@ -39,25 +40,31 @@ backend/
 		models/
 			caption.py
 			product.py
+			promotional_image.py
 			user.py
 		repositories/
 			caption_repository.py
+			image_repository.py
 			product_repository.py
 			user_repository.py
 		schemas/
 			auth.py
 			caption.py
 			common.py
+			image.py
 			product.py
 			user.py
 		services/
 			auth_service.py
 			caption_service.py
+			image_service.py
 			shopee_product_service.py
 			user_service.py
 		utils/
 			ai_caption_engine.py
 			caption_prompt_templates.py
+			image_generator_engine.py
+			image_templates.py
 			shopee_parser.py
 			shopee_validator.py
 		main.py
@@ -79,6 +86,7 @@ backend/
 - Infrastructure Layer (`app/core`, `app/db`): settings, security, logging, DB session lifecycle.
 - Shopee Product Service: URL validation -> parser -> cache lookup/upsert in repository -> API response.
 - AI Caption Engine: product lookup -> prompt template selection by style -> 10 caption generation -> persistent storage.
+- Image Generator: product lookup -> Pillow template rendering for Facebook cover -> PNG file generation -> metadata persistence.
 
 ## Local Setup
 
@@ -133,6 +141,7 @@ docker compose up --build
 - `PATCH /api/v1/users/{user_id}` (JWT required)
 - `POST /api/v1/products/shopee` (JWT required)
 - `POST /api/v1/captions/generate` (JWT required)
+- `POST /api/v1/images/promotional` (JWT required)
 
 ## Testing
 
@@ -154,6 +163,17 @@ pytest -q
 - Output: exactly 10 Facebook-ready captions; each item contains `hook`, `cta`, `emoji`, `hashtags`, and `caption_text`.
 - Prompt templates: centralized in `app/utils/caption_prompt_templates.py` and used by `AICaptionEngine`.
 - Persistence: generated caption batches and caption items are stored in `caption_batches` and `captions` tables.
+
+## Image Generator
+
+- Input: `product_id`, `template`, optional `shop_logo_url`.
+- Templates supported: `classic`, `bold`, `minimal`.
+- Rendering engine: Pillow-based promotional image generation as Facebook Cover (`820x312`) in PNG format.
+- Content used: product image, price, discount, shop logo (or placeholder), CTA banner.
+- Persistence: metadata stored in `promotional_images` table (path, size, format, source URLs).
+- Config:
+	- `IMAGE_OUTPUT_DIR`
+	- `IMAGE_REQUEST_TIMEOUT_SECONDS`
 
 ## Logging
 

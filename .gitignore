@@ -6,3 +6,4 @@ __pycache__/
 *.pyd
 affiliate.db
 .env
+generated_images/
