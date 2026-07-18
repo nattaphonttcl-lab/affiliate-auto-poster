@@ -23,6 +23,7 @@ backend/
 		api/
 			auth.py
 			captions.py
+			dashboard.py
 			dependencies.py
 			health.py
 			images.py
@@ -46,6 +47,7 @@ backend/
 			user.py
 		repositories/
 			caption_repository.py
+			dashboard_repository.py
 			image_repository.py
 			product_repository.py
 			scheduler_repository.py
@@ -54,6 +56,7 @@ backend/
 			auth.py
 			caption.py
 			common.py
+			dashboard.py
 			image.py
 			product.py
 			scheduler.py
@@ -61,6 +64,7 @@ backend/
 		services/
 			auth_service.py
 			caption_service.py
+			dashboard_service.py
 			image_service.py
 			scheduler_service.py
 			shopee_product_service.py
@@ -94,6 +98,7 @@ backend/
 - AI Caption Engine: product lookup -> prompt template selection by style -> 10 caption generation -> persistent storage.
 - Image Generator: product lookup -> Pillow template rendering for Facebook cover -> PNG file generation -> metadata persistence.
 - Scheduler: schedule storage -> due-job executor -> publisher adapter (audit/webhook) -> execution logs.
+- Dashboard: aggregated operational KPIs and recent activity feed across products, captions, images, and scheduler.
 
 ## Local Setup
 
@@ -152,6 +157,8 @@ docker compose up --build
 - `POST /api/v1/scheduler/posts` (JWT required)
 - `POST /api/v1/scheduler/run` (JWT required)
 - `GET /api/v1/scheduler/posts` (JWT required)
+- `GET /api/v1/dashboard/summary` (JWT required)
+- `GET /api/v1/dashboard/activities` (JWT required)
 
 ## Testing
 
@@ -196,6 +203,12 @@ pytest -q
 	- `SCHEDULER_PUBLISHER_MODE`
 	- `SCHEDULER_WEBHOOK_URL`
 	- `SCHEDULER_WEBHOOK_TIMEOUT_SECONDS`
+
+## Dashboard
+
+- Summary endpoint exposes total counts for products, caption batches, promotional images, and scheduled posts.
+- Scheduler breakdown includes pending, processing, published, and failed jobs.
+- Activities endpoint merges recent caption batches, generated images, and scheduled posts into a single feed.
 
 ## Logging
 

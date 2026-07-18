@@ -7,12 +7,14 @@ from app.core.exceptions import AppException
 from app.core.security import decode_access_token
 from app.db.session import get_db_session
 from app.repositories.caption_repository import CaptionRepository
+from app.repositories.dashboard_repository import DashboardRepository
 from app.repositories.image_repository import ImageRepository
 from app.repositories.product_repository import ProductRepository
 from app.repositories.scheduler_repository import SchedulerRepository
 from app.repositories.user_repository import UserRepository
 from app.services.auth_service import AuthService
 from app.services.caption_service import CaptionService
+from app.services.dashboard_service import DashboardService
 from app.services.image_service import ImageService
 from app.services.scheduler_service import SchedulerService
 from app.services.shopee_product_service import ShopeeProductService
@@ -89,6 +91,11 @@ def get_scheduler_service(
         publisher = AuditPostPublisher()
 
     return SchedulerService(scheduler_repository, publisher)
+
+
+def get_dashboard_service(db: Session = Depends(get_db_session)) -> DashboardService:
+    repository = DashboardRepository(db)
+    return DashboardService(repository)
 
 
 def get_current_user_id(
