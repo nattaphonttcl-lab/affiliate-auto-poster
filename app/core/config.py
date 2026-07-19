@@ -32,6 +32,17 @@ class Settings(BaseSettings):
     tracing_service_name: str = Field(default="affiliate-auto-poster-backend")
     tracing_otlp_endpoint: str | None = Field(default=None)
 
+    ai_provider_encryption_key: str = Field(default="change-me-ai-credentials")
+    ai_template_cache_ttl_seconds: int = Field(default=300)
+    ai_generation_rate_limit_per_minute: int = Field(default=30)
+    ai_banned_words: str = Field(default="scam,fake,guaranteed rich")
+
+    openai_api_key: str | None = Field(default=None)
+    gemini_api_key: str | None = Field(default=None)
+    claude_api_key: str | None = Field(default=None)
+    deepseek_api_key: str | None = Field(default=None)
+    openrouter_api_key: str | None = Field(default=None)
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

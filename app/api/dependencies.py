@@ -8,12 +8,15 @@ from app.core.exceptions import AppException
 from app.core.security import decode_access_token
 from app.db.session import get_db_session
 from app.repositories.analytics_repository import AnalyticsRepository
+from app.repositories.ai_content_repository import AIContentRepository
 from app.repositories.caption_repository import CaptionRepository
 from app.repositories.dashboard_repository import DashboardRepository
 from app.repositories.image_repository import ImageRepository
 from app.repositories.product_repository import ProductRepository
 from app.repositories.scheduler_repository import SchedulerRepository
 from app.repositories.user_repository import UserRepository
+from app.services.ai_content_service import AIContentService
+from app.services.ai_providers import ProviderFactory
 from app.services.analytics_service import AnalyticsService
 from app.services.auth_service import AuthService
 from app.services.caption_service import CaptionService
@@ -39,6 +42,8 @@ from app.utils.shopee_validator import ShopeeProductValidator
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 _product_cache = InMemoryTTLCache()
 _refresh_queue = InMemoryProductRefreshQueue()
+_ai_template_cache = InMemoryTTLCache()
+_ai_provider_factory = ProviderFactory()
 
 
 def get_settings_dependency() -> Settings:
@@ -114,6 +119,23 @@ def get_caption_service(
     engine = AICaptionEngine()
     return CaptionService(
         product_repository, caption_repository, engine, analytics_repository
+    )
+
+
+def get_ai_content_service(
+    db: Session = Depends(get_db_session),
+    settings: Settings = Depends(get_settings_dependency),
+    analytics_repository: AnalyticsRepository = Depends(get_analytics_repository),
+) -> AIContentService:
+    product_repository = ProductRepository(db)
+    ai_repository = AIContentRepository(db)
+    return AIContentService(
+        product_repository,
+        ai_repository,
+        _ai_provider_factory,
+        settings,
+        _ai_template_cache,
+        analytics_repository,
     )
 
 

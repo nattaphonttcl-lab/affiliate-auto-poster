@@ -1,3 +1,10 @@
+from app.models.ai_content import (
+    AIProviderConfig,
+    GeneratedContent,
+    GeneratedContentVersion,
+    PromptTemplate,
+    PromptVariable,
+)
 from app.models.analytics_event import AnalyticsEvent
 from app.models.caption import Caption, CaptionBatch
 from app.models.outbox_event import OutboxEvent
@@ -18,7 +25,12 @@ from app.models.user import User
 
 __all__ = [
     "AnalyticsEvent",
+    "AIProviderConfig",
     "Caption",
+    "GeneratedContent",
+    "GeneratedContentVersion",
+    "PromptTemplate",
+    "PromptVariable",
     "CaptionBatch",
     "OutboxEvent",
     "Product",

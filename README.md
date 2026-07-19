@@ -100,6 +100,7 @@ backend/
 - Domain Model Layer (`app/models`): SQLAlchemy ORM entities.
 - Infrastructure Layer (`app/core`, `app/db`): settings, security, logging, DB session lifecycle.
 - Marketplace Product Module: provider registry/factory -> URL normalizer -> product fingerprint -> cache-aware aggregate repository upsert.
+- Enterprise AI Content Engine: prompt template repository -> provider factory -> quality guardrails -> content history/versioning.
 - AI Caption Engine: product lookup -> prompt template selection by style -> 10 caption generation -> persistent storage.
 - Image Generator: product lookup -> Pillow template rendering for Facebook cover -> PNG file generation -> metadata persistence.
 - Scheduler: schedule storage -> due-job executor -> publisher adapter (audit/webhook) -> execution logs.
@@ -166,6 +167,13 @@ docker compose up --build
 - `PATCH /api/v1/products/{product_id}` (JWT required)
 - `DELETE /api/v1/products/{product_id}` (JWT required)
 - `POST /api/v1/products/{product_id}/refresh` (JWT required)
+- `POST /api/v1/ai/generate` (JWT required)
+- `POST /api/v1/ai/regenerate` (JWT required)
+- `GET /api/v1/ai/history` (JWT required)
+- `GET /api/v1/ai/templates` (JWT required)
+- `POST /api/v1/ai/templates` (JWT required)
+- `PATCH /api/v1/ai/templates/{template_id}` (JWT required)
+- `DELETE /api/v1/ai/templates/{template_id}` (JWT required)
 - `POST /api/v1/captions/generate` (JWT required)
 - `POST /api/v1/images/promotional` (JWT required)
 - `POST /api/v1/scheduler/posts` (JWT required)
@@ -223,6 +231,60 @@ python -m compileall app tests alembic
 	- In-memory implementation (`InMemoryProductRefreshQueue`)
 - Backward compatibility:
 	- Legacy endpoint `POST /api/v1/products/shopee` remains supported
+
+## Enterprise AI Content Engine
+
+- Provider interface and implementations:
+	- `AIProvider`
+	- `OpenAIProvider`
+	- `GeminiProvider`
+	- `ClaudeProvider`
+	- `DeepSeekProvider`
+	- `OpenRouterProvider`
+	- `ProviderFactory` with provider client reuse
+- Prompt template system (versioned):
+	- `PromptTemplate`
+	- `PromptVariable`
+	- `PromptRepository` behavior through `AIContentRepository`
+	- Categories: `facebook`, `tiktok`, `instagram`, `youtube_shorts`, `shopee_live`, `general_affiliate`
+	- Template fields: `system_prompt`, `user_prompt`, `variables`, `temperature`, `max_tokens`, `version`, `status`
+- Content history and versioning:
+	- `GeneratedContent` as content history root
+	- `GeneratedContentVersion` for immutable generated snapshots
+	- Tracks provider, model, prompt version, generated text, cost, latency, creator, and timestamps
+- Generation support:
+	- Content types: Facebook/TikTok captions, hook, CTA, SEO keywords, hashtags, short/long description, product/comparison review, buying guide, FAQ
+	- Writing styles: professional, friendly, mother_blogger, luxury, minimal, emotional, sales, urgency, storytelling
+	- Audience profiles: parents, students, office_workers, beauty, fashion, gaming, pets, home, electronics, health
+	- Regeneration preserves full version history
+- Security:
+	- Provider credentials are encrypted at rest (`ai_provider_configs.api_key_encrypted`)
+	- API keys are never returned by API responses
+	- Prompt instruction validation blocks unsafe override/jailbreak patterns
+	- Per-user generation rate limiting
+- Quality guardrails:
+	- Minimum length checks
+	- Duplicate detection for regeneration and cross-content outputs
+	- Banned words filtering
+	- Emoji optimization for captions
+	- Hashtag normalization and cap
+	- Platform-specific length limits
+- Performance:
+	- Prompt template cache with TTL
+	- Provider client reuse through factory cache
+	- Async provider generation path
+
+### AI Configuration
+
+- `AI_PROVIDER_ENCRYPTION_KEY`
+- `AI_TEMPLATE_CACHE_TTL_SECONDS`
+- `AI_GENERATION_RATE_LIMIT_PER_MINUTE`
+- `AI_BANNED_WORDS`
+- `OPENAI_API_KEY`
+- `GEMINI_API_KEY`
+- `CLAUDE_API_KEY`
+- `DEEPSEEK_API_KEY`
+- `OPENROUTER_API_KEY`
 
 ## AI Caption Engine
 

@@ -9,6 +9,7 @@ from app.core.config import get_settings
 from app.db.base import Base
 
 # Import model modules for SQLAlchemy metadata registration.
+import app.models.ai_content  # noqa: F401
 import app.models.analytics_event  # noqa: F401
 import app.models.caption  # noqa: F401
 import app.models.outbox_event  # noqa: F401
