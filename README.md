@@ -551,3 +551,54 @@ python -m compileall app tests alembic
 	- `npm run test`
 	- `npm run test:e2e`
 
+## Enterprise Production Platform (Sprint 8)
+
+- Infrastructure stack:
+	- Multi-stage Dockerfiles for backend (`Dockerfile`) and frontend (`frontend/Dockerfile`)
+	- Reverse proxy with TLS and security headers (`deploy/nginx/default.conf`)
+	- Redis and MinIO services
+	- Production compose stack (`docker-compose.yml`)
+	- Development compose overlay (`docker-compose.dev.yml`)
+- Background workers:
+	- `python -m app.workers.queue_worker`
+	- `python -m app.workers.retry_worker`
+	- `python -m app.workers.analytics_worker`
+	- `python -m app.workers.cleanup_worker`
+	- `python -m app.workers.health_worker`
+- Observability:
+	- Prometheus metrics endpoint at `/api/v1/health/metrics`
+	- Liveness/readiness probes at `/api/v1/health/liveness` and `/api/v1/health/readiness`
+	- Grafana + Loki + Promtail stack for metrics/logs
+	- Existing OpenTelemetry tracing support
+- Security hardening:
+	- CORS allow-list configuration (`CORS_ALLOWED_ORIGINS`)
+	- Rate limiting middleware (`RATE_LIMIT_REQUESTS_PER_MINUTE`)
+	- Security headers middleware
+	- Secret file support (`*_FILE` variables for keys)
+	- Dependency audits in CI
+- Performance and resilience:
+	- DB pool settings for non-SQLite engines
+	- GZip compression middleware
+	- API and image caching rules in nginx
+	- Performance scripts in `tests/performance/`
+	- Backup/restore scripts in `scripts/backup.py` and `scripts/restore.py`
+- Operations docs:
+	- `docs/deployment-guide.md`
+	- `docs/operations-guide.md`
+	- `docs/runbook.md`
+	- `docs/release-notes-sprint-8.md`
+
+### Sprint 8 Validation Commands
+
+- Backend:
+	- `ruff check .`
+	- `black --check .`
+	- `pytest -q`
+- Frontend (from `frontend/`):
+	- `npm run lint`
+	- `npm run build`
+	- `npm run test`
+	- `npm run test:e2e`
+- Docker:
+	- `docker compose config`
+

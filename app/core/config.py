@@ -1,5 +1,8 @@
 from functools import lru_cache
+from pathlib import Path
+
 from pydantic import Field
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -11,6 +14,9 @@ class Settings(BaseSettings):
     api_v1_prefix: str = Field(default="/api/v1")
 
     database_url: str = Field(default="sqlite:///./affiliate.db")
+    db_pool_size: int = Field(default=10)
+    db_max_overflow: int = Field(default=20)
+    db_pool_recycle_seconds: int = Field(default=1800)
 
     shopee_cache_ttl_minutes: int = Field(default=60)
     shopee_request_timeout_seconds: float = Field(default=10.0)
@@ -46,8 +52,28 @@ class Settings(BaseSettings):
     publishing_circuit_breaker_seconds: int = Field(default=120)
 
     secret_key: str = Field(default="change-me")
+    secret_key_file: str | None = Field(default=None)
     access_token_expire_minutes: int = Field(default=60)
     jwt_algorithm: str = Field(default="HS256")
+
+    cors_allowed_origins: str = Field(
+        default="http://localhost:3000,http://localhost:5173"
+    )
+    cors_allow_credentials: bool = Field(default=True)
+    rate_limit_requests_per_minute: int = Field(default=120)
+
+    security_csp: str = Field(
+        default=(
+            "default-src 'self'; "
+            "img-src 'self' data: blob:; "
+            "style-src 'self' 'unsafe-inline'; "
+            "script-src 'self'; "
+            "font-src 'self' data:; "
+            "connect-src 'self' http: https: ws: wss:"
+        )
+    )
+    security_hsts_enabled: bool = Field(default=False)
+    security_hsts_max_age: int = Field(default=31536000)
 
     log_level: str = Field(default="INFO")
     log_json: bool = Field(default=True)
@@ -62,10 +88,72 @@ class Settings(BaseSettings):
     ai_banned_words: str = Field(default="scam,fake,guaranteed rich")
 
     openai_api_key: str | None = Field(default=None)
+    openai_api_key_file: str | None = Field(default=None)
     gemini_api_key: str | None = Field(default=None)
+    gemini_api_key_file: str | None = Field(default=None)
     claude_api_key: str | None = Field(default=None)
+    claude_api_key_file: str | None = Field(default=None)
     deepseek_api_key: str | None = Field(default=None)
+    deepseek_api_key_file: str | None = Field(default=None)
     openrouter_api_key: str | None = Field(default=None)
+    openrouter_api_key_file: str | None = Field(default=None)
+
+    redis_url: str = Field(default="redis://redis:6379/0")
+    redis_enabled: bool = Field(default=False)
+    api_cache_ttl_seconds: int = Field(default=60)
+    image_cache_ttl_seconds: int = Field(default=3600)
+
+    minio_endpoint: str | None = Field(default="minio:9000")
+    minio_access_key: str | None = Field(default="minioadmin")
+    minio_access_key_file: str | None = Field(default=None)
+    minio_secret_key: str | None = Field(default="minioadmin")
+    minio_secret_key_file: str | None = Field(default=None)
+    minio_bucket_name: str = Field(default="affiliate-assets")
+    minio_secure: bool = Field(default=False)
+
+    workers_poll_seconds: int = Field(default=10)
+    workers_default_owner_user_id: int = Field(default=1)
+
+    @model_validator(mode="after")
+    def _load_file_backed_secrets(self) -> "Settings":
+        self.secret_key = self._resolve_secret(self.secret_key, self.secret_key_file)
+        self.openai_api_key = self._resolve_secret(
+            self.openai_api_key, self.openai_api_key_file
+        )
+        self.gemini_api_key = self._resolve_secret(
+            self.gemini_api_key, self.gemini_api_key_file
+        )
+        self.claude_api_key = self._resolve_secret(
+            self.claude_api_key, self.claude_api_key_file
+        )
+        self.deepseek_api_key = self._resolve_secret(
+            self.deepseek_api_key, self.deepseek_api_key_file
+        )
+        self.openrouter_api_key = self._resolve_secret(
+            self.openrouter_api_key, self.openrouter_api_key_file
+        )
+        self.minio_access_key = self._resolve_secret(
+            self.minio_access_key, self.minio_access_key_file
+        )
+        self.minio_secret_key = self._resolve_secret(
+            self.minio_secret_key, self.minio_secret_key_file
+        )
+        return self
+
+    @staticmethod
+    def _resolve_secret(value: str | None, path: str | None) -> str | None:
+        if not path:
+            return value
+
+        content = Path(path).read_text(encoding="utf-8").strip()
+        if not content:
+            return value
+        return content
+
+    @property
+    def cors_allowed_origins_list(self) -> list[str]:
+        origins = [item.strip() for item in self.cors_allowed_origins.split(",")]
+        return [item for item in origins if item]
 
     model_config = SettingsConfigDict(
         env_file=".env",

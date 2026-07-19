@@ -20,3 +20,5 @@ pytest-cov==6.2.1
 ruff==0.12.7
 black==24.10.0
 bandit==1.8.6
+prometheus-client==0.23.1
+redis==6.4.0
