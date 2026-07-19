@@ -184,6 +184,16 @@ docker compose up --build
 - `PATCH /api/v1/images/templates/{template_id}` (JWT required)
 - `DELETE /api/v1/images/templates/{template_id}` (JWT required)
 - `POST /api/v1/images/preview` (JWT required)
+- `POST /api/v1/publish` (JWT required)
+- `POST /api/v1/publish/schedule` (JWT required)
+- `POST /api/v1/publish/retry` (JWT required)
+- `POST /api/v1/publish/cancel` (JWT required)
+- `GET /api/v1/publish/jobs` (JWT required)
+- `GET /api/v1/publish/history` (JWT required)
+- `GET /api/v1/social/accounts` (JWT required)
+- `POST /api/v1/social/accounts` (JWT required)
+- `PATCH /api/v1/social/accounts/{social_account_id}` (JWT required)
+- `DELETE /api/v1/social/accounts/{social_account_id}` (JWT required)
 - `POST /api/v1/scheduler/posts` (JWT required)
 - `POST /api/v1/scheduler/posts/{scheduled_post_id}/confirm` (JWT required)
 - `POST /api/v1/scheduler/run` (JWT required)
@@ -382,6 +392,87 @@ python -m compileall app tests alembic
 - `GOOGLE_IMAGEN_API_KEY`
 - `STABILITY_AI_API_KEY`
 - `FLUX_API_KEY`
+
+## Enterprise Social Publishing Engine
+
+- Provider interface and implementations:
+	- `SocialProvider`
+	- `FacebookProvider`
+	- `FacebookPageProvider`
+	- `InstagramProvider`
+	- `ThreadsProvider`
+	- `TikTokProvider`
+	- `YouTubeShortsProvider`
+	- `ShopeeVideoProvider`
+	- `ProviderFactory`
+	- `ProviderRegistry` with failover sequence
+- Publish pipeline:
+	- Load product
+	- Load AI caption content
+	- Load generated image/media assets
+	- Platform-specific payload formatting
+	- Validation and permission checks
+	- Queueing and worker claim
+	- Publish execution and failover
+	- Retry/dead-letter handling
+	- Persist status/history and analytics
+- Supported post types:
+	- Facebook Feed/Reel/Story/Cover
+	- Instagram Feed/Story/Reel
+	- Threads
+	- TikTok Video/Image Post
+	- YouTube Shorts
+	- Shopee Feed
+- Content mapping fields:
+	- Caption
+	- Hashtags
+	- Mentions
+	- CTA
+	- Affiliate link
+	- Image/video/thumbnail
+	- Alt text
+- Normalized entities:
+	- `SocialAccount`
+	- `PlatformCredential`
+	- `PublishingJob`
+	- `PublishingQueue`
+	- `PublishingHistory`
+	- `MediaAttachment`
+	- `PublishingAuditLog`
+	- `DeadLetterQueue`
+- Queue and status model:
+	- `pending`, `scheduled`, `publishing`, `published`, `retry`, `failed`, `cancelled`, `expired`
+- Retry engine:
+	- Exponential backoff
+	- Retry counters with max retries
+	- Dead-letter queue promotion after retry exhaustion
+	- Circuit breaker cooldown per platform
+	- Idempotency key enforcement to prevent duplicate publishing
+- Scheduler controls:
+	- Immediate publish
+	- Scheduled publish
+	- Recurring metadata (`recurrence_rule`)
+	- Timezone and business-hours enforcement
+	- Account-level rate-limit metadata
+- Security:
+	- OAuth access/refresh tokens encrypted at rest (`platform_credentials`)
+	- Credential rotation timestamp tracking (`rotated_at`)
+	- Permission validation for account onboarding/updates
+	- Publishing audit log trail for create/update/retry/cancel/publish actions
+- Background workers:
+	- Queue worker
+	- Retry worker
+	- Analytics sync worker
+	- Dead-letter queue worker
+	- Cleanup worker
+
+### Social Publishing Configuration
+
+- `PUBLISHING_PROVIDER_FAILOVER_ORDER`
+- `PUBLISHING_RETRY_BASE_SECONDS`
+- `PUBLISHING_RETRY_MAX_SECONDS`
+- `PUBLISHING_CIRCUIT_BREAKER_FAILURES`
+- `PUBLISHING_CIRCUIT_BREAKER_SECONDS`
 
 ## Scheduler
 

@@ -29,6 +29,16 @@ from app.models.scheduled_post import (
     ScheduledPostAudit,
     ScheduledPostExecution,
 )
+from app.models.publishing import (
+    DeadLetterQueue,
+    MediaAttachment,
+    PlatformCredential,
+    PublishingAuditLog,
+    PublishingHistory,
+    PublishingJob,
+    PublishingQueue,
+    SocialAccount,
+)
 from app.models.user import User
 
 __all__ = [
@@ -56,5 +66,13 @@ __all__ = [
     "ScheduledPost",
     "ScheduledPostAudit",
     "ScheduledPostExecution",
+    "SocialAccount",
+    "PlatformCredential",
+    "PublishingJob",
+    "PublishingHistory",
+    "PublishingQueue",
+    "MediaAttachment",
+    "PublishingAuditLog",
+    "DeadLetterQueue",
     "User",
 ]

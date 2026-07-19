@@ -37,6 +37,14 @@ class Settings(BaseSettings):
     scheduler_webhook_url: str | None = Field(default=None)
     scheduler_webhook_timeout_seconds: float = Field(default=10.0)
 
+    publishing_provider_failover_order: str = Field(
+        default="facebook,facebook_page,instagram,threads,tiktok,youtube_shorts,shopee_video"
+    )
+    publishing_retry_base_seconds: int = Field(default=30)
+    publishing_retry_max_seconds: int = Field(default=3600)
+    publishing_circuit_breaker_failures: int = Field(default=3)
+    publishing_circuit_breaker_seconds: int = Field(default=120)
+
     secret_key: str = Field(default="change-me")
     access_token_expire_minutes: int = Field(default=60)
     jwt_algorithm: str = Field(default="HS256")

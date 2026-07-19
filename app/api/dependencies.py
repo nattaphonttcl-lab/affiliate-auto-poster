@@ -14,6 +14,7 @@ from app.repositories.dashboard_repository import DashboardRepository
 from app.repositories.image_engine_repository import ImageEngineRepository
 from app.repositories.image_repository import ImageRepository
 from app.repositories.product_repository import ProductRepository
+from app.repositories.publishing_repository import PublishingRepository
 from app.repositories.scheduler_repository import SchedulerRepository
 from app.repositories.user_repository import UserRepository
 from app.services.ai_content_service import AIContentService
@@ -27,10 +28,13 @@ from app.services.image_providers import ImageProviderFactory, ImageProviderRegi
 from app.services.image_service import ImageService
 from app.services.marketplace_provider import MarketplaceProviderRegistry
 from app.services.product_service import ProductService
+from app.services.publishing_service import PublishingService
 from app.services.provider_factory import build_provider_registry
 from app.services.refresh_queue import InMemoryProductRefreshQueue, ProductRefreshQueue
 from app.services.scheduler_service import SchedulerService
 from app.services.shopee_product_service import ShopeeProductService
+from app.services.social_providers import ProviderFactory as SocialProviderFactory
+from app.services.social_providers import ProviderRegistry as SocialProviderRegistry
 from app.services.user_service import UserService
 from app.services.image_storage import StorageConfig, StorageFactory
 from app.utils.ai_caption_engine import AICaptionEngine
@@ -52,6 +56,8 @@ _image_template_cache = InMemoryTTLCache()
 _image_provider_factory = ImageProviderFactory()
 _image_provider_registry = ImageProviderRegistry(factory=_image_provider_factory)
 _storage_factory = StorageFactory()
+_social_provider_factory = SocialProviderFactory()
+_social_provider_registry = SocialProviderRegistry(factory=_social_provider_factory)
 
 
 def get_settings_dependency() -> Settings:
@@ -213,6 +219,22 @@ def get_scheduler_service(
         publisher = AuditPostPublisher()
 
     return SchedulerService(scheduler_repository, publisher, analytics_repository)
+
+
+def get_publishing_service(
+    db: Session = Depends(get_db_session),
+    settings: Settings = Depends(get_settings_dependency),
+    analytics_repository: AnalyticsRepository = Depends(get_analytics_repository),
+) -> PublishingService:
+    return PublishingService(
+        product_repository=ProductRepository(db),
+        ai_repository=AIContentRepository(db),
+        image_repository=ImageEngineRepository(db),
+        repository=PublishingRepository(db),
+        provider_registry=_social_provider_registry,
+        settings=settings,
+        analytics_repository=analytics_repository,
+    )
 
 
 def get_dashboard_service(db: Session = Depends(get_db_session)) -> DashboardService:
