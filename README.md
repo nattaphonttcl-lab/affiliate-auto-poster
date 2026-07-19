@@ -533,3 +533,21 @@ python -m compileall app tests alembic
 	- Bandit
 	- Docker image build
 
+## Enterprise React Dashboard (Sprint 7)
+
+- Frontend app lives in `frontend/`.
+- Architecture stack:
+	- React 19 + TypeScript + Vite
+	- React Router + TanStack Query + Axios
+	- React Hook Form + Zod
+	- TailwindCSS + Radix-based primitives
+	- Recharts + React Table + React DnD + Framer Motion
+	- Vitest + React Testing Library + Playwright
+- Dashboard consumes existing backend APIs only and does not reimplement backend business logic.
+- Frontend routes cover overview, products, AI studio, image studio, publishing, analytics, settings, users, calendar, files, and system status.
+- Frontend validation commands:
+	- `npm run lint`
+	- `npm run build`
+	- `npm run test`
+	- `npm run test:e2e`
+
