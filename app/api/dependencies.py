@@ -16,6 +16,7 @@ from app.repositories.image_repository import ImageRepository
 from app.repositories.product_repository import ProductRepository
 from app.repositories.publishing_repository import PublishingRepository
 from app.repositories.scheduler_repository import SchedulerRepository
+from app.repositories.saas_repository import SaaSRepository
 from app.repositories.user_repository import UserRepository
 from app.services.ai_content_service import AIContentService
 from app.services.ai_providers import ProviderFactory
@@ -32,6 +33,7 @@ from app.services.publishing_service import PublishingService
 from app.services.provider_factory import build_provider_registry
 from app.services.refresh_queue import InMemoryProductRefreshQueue, ProductRefreshQueue
 from app.services.scheduler_service import SchedulerService
+from app.services.saas_service import SaaSService
 from app.services.shopee_product_service import ShopeeProductService
 from app.services.social_providers import ProviderFactory as SocialProviderFactory
 from app.services.social_providers import ProviderRegistry as SocialProviderRegistry
@@ -246,6 +248,10 @@ def get_analytics_service(
     analytics_repository: AnalyticsRepository = Depends(get_analytics_repository),
 ) -> AnalyticsService:
     return AnalyticsService(analytics_repository)
+
+
+def get_saas_service(db: Session = Depends(get_db_session)) -> SaaSService:
+    return SaaSService(SaaSRepository(db))
 
 
 def get_current_user_id(

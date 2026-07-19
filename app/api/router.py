@@ -9,6 +9,7 @@ from app.api import (
     health,
     images,
     publishing,
+    saas,
     products,
     scheduler,
     users,
@@ -24,6 +25,7 @@ api_router.include_router(captions.router)
 api_router.include_router(images.router)
 api_router.include_router(publishing.router)
 api_router.include_router(publishing.social_router)
+api_router.include_router(saas.router)
 api_router.include_router(scheduler.router)
 api_router.include_router(dashboard.router)
 api_router.include_router(analytics.router)

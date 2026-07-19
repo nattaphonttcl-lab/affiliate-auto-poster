@@ -39,6 +39,23 @@ from app.models.publishing import (
     PublishingQueue,
     SocialAccount,
 )
+from app.models.saas import (
+    AffiliateInsight,
+    ApiKey,
+    AuditEvent,
+    ContentCalendarItem,
+    CustomerFeedback,
+    Invitation,
+    NotificationChannel,
+    NotificationEvent,
+    Organization,
+    PaymentTransaction,
+    Subscription,
+    Tenant,
+    UsageRecord,
+    Workspace,
+    WorkspaceMember,
+)
 from app.models.user import User
 
 __all__ = [
@@ -74,5 +91,20 @@ __all__ = [
     "MediaAttachment",
     "PublishingAuditLog",
     "DeadLetterQueue",
+    "Tenant",
+    "Organization",
+    "Workspace",
+    "WorkspaceMember",
+    "Invitation",
+    "Subscription",
+    "PaymentTransaction",
+    "UsageRecord",
+    "ApiKey",
+    "AuditEvent",
+    "NotificationChannel",
+    "NotificationEvent",
+    "ContentCalendarItem",
+    "AffiliateInsight",
+    "CustomerFeedback",
     "User",
 ]

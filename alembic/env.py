@@ -17,6 +17,7 @@ import app.models.outbox_event  # noqa: F401
 import app.models.publishing  # noqa: F401
 import app.models.product  # noqa: F401
 import app.models.promotional_image  # noqa: F401
+import app.models.saas  # noqa: F401
 import app.models.scheduled_post  # noqa: F401
 import app.models.user  # noqa: F401
 
