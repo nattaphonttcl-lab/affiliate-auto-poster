@@ -5,6 +5,14 @@ from app.models.ai_content import (
     PromptTemplate,
     PromptVariable,
 )
+from app.models.image_generation import (
+    GeneratedImage,
+    GeneratedImageVersion,
+    ImageAsset,
+    ImageHistory,
+    ImageProviderConfig,
+    ImageTemplate,
+)
 from app.models.analytics_event import AnalyticsEvent
 from app.models.caption import Caption, CaptionBatch
 from app.models.outbox_event import OutboxEvent
@@ -29,8 +37,14 @@ __all__ = [
     "Caption",
     "GeneratedContent",
     "GeneratedContentVersion",
+    "GeneratedImage",
+    "GeneratedImageVersion",
     "PromptTemplate",
     "PromptVariable",
+    "ImageAsset",
+    "ImageHistory",
+    "ImageProviderConfig",
+    "ImageTemplate",
     "CaptionBatch",
     "OutboxEvent",
     "Product",

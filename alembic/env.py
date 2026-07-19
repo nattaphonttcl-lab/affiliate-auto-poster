@@ -12,6 +12,7 @@ from app.db.base import Base
 import app.models.ai_content  # noqa: F401
 import app.models.analytics_event  # noqa: F401
 import app.models.caption  # noqa: F401
+import app.models.image_generation  # noqa: F401
 import app.models.outbox_event  # noqa: F401
 import app.models.product  # noqa: F401
 import app.models.promotional_image  # noqa: F401

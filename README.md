@@ -176,6 +176,14 @@ docker compose up --build
 - `DELETE /api/v1/ai/templates/{template_id}` (JWT required)
 - `POST /api/v1/captions/generate` (JWT required)
 - `POST /api/v1/images/promotional` (JWT required)
+- `POST /api/v1/images/generate` (JWT required)
+- `POST /api/v1/images/regenerate` (JWT required)
+- `GET /api/v1/images/history` (JWT required)
+- `GET /api/v1/images/templates` (JWT required)
+- `POST /api/v1/images/templates` (JWT required)
+- `PATCH /api/v1/images/templates/{template_id}` (JWT required)
+- `DELETE /api/v1/images/templates/{template_id}` (JWT required)
+- `POST /api/v1/images/preview` (JWT required)
 - `POST /api/v1/scheduler/posts` (JWT required)
 - `POST /api/v1/scheduler/posts/{scheduled_post_id}/confirm` (JWT required)
 - `POST /api/v1/scheduler/run` (JWT required)
@@ -304,6 +312,76 @@ python -m compileall app tests alembic
 - Config:
 	- `IMAGE_OUTPUT_DIR`
 	- `IMAGE_REQUEST_TIMEOUT_SECONDS`
+
+## Enterprise Image Generation Engine
+
+- Provider architecture:
+	- `ImageProvider`
+	- `OpenAIImageProvider`
+	- `GoogleImagenProvider`
+	- `StabilityAIProvider`
+	- `FluxProvider`
+	- `LocalTemplateProvider`
+	- `ImageProviderFactory`
+	- `ImageProviderRegistry` with failover sequence
+- Template engine (versioned):
+	- `ImageTemplate`
+	- `canvas_width`, `canvas_height`, `safe_area`
+	- `background`, `layers`, `fonts`, `colors`
+	- `logo_position`, `watermark`, `overlay`
+	- `dynamic_variables`, `version`, `status`
+- Image entities:
+	- `GeneratedImage`
+	- `GeneratedImageVersion`
+	- `ImageHistory`
+	- `ImageProviderConfig`
+	- `ImageAsset`
+- Supported image types:
+	- `facebook_post`, `facebook_cover`
+	- `tiktok_cover`, `tiktok_thumbnail`
+	- `instagram_post`, `instagram_story`
+	- `youtube_thumbnail`, `shopee_product_banner`
+	- `promotion_banner`, `carousel_slide`, `product_card`
+	- `square_image`, `vertical_image`, `horizontal_image`
+- Generation pipeline:
+	- Load product aggregate
+	- Load latest AI caption context (optional)
+	- Resolve active template (cache-first)
+	- Replace dynamic variables and render prompt
+	- Generate image with provider failover
+	- Run quality checks (resolution, safe area, corruption, duplicate)
+	- Optimize + create preview/thumbnail
+	- Persist through storage abstraction and version history
+- Storage abstraction:
+	- `ImageStorageBackend`
+	- `LocalStorageBackend`
+	- `S3CompatibleStorageBackend` for S3/R2/MinIO targets
+	- `StorageFactory`
+- Security and limits:
+	- Provider credentials encrypted at rest (`image_provider_configs.api_key_encrypted`)
+	- API keys never returned by APIs
+	- File extension/type and size controls via storage and service validation
+- Performance:
+	- Provider client reuse
+	- Async generation flow
+	- Template cache
+	- Preview/thumbnail generation pipeline
+
+### Image Engine Configuration
+
+- `IMAGE_STORAGE_BACKEND`
+- `IMAGE_STORAGE_LOCAL_DIR`
+- `IMAGE_STORAGE_BUCKET`
+- `IMAGE_STORAGE_ENDPOINT`
+- `IMAGE_TEMPLATE_CACHE_TTL_SECONDS`
+- `IMAGE_PROVIDER_FAILOVER_ORDER`
+- `IMAGE_PROVIDER_ENCRYPTION_KEY`
+- `IMAGE_MIN_RESOLUTION_WIDTH`
+- `IMAGE_MIN_RESOLUTION_HEIGHT`
+- `IMAGE_MAX_UPLOAD_SIZE_MB`
+- `GOOGLE_IMAGEN_API_KEY`
+- `STABILITY_AI_API_KEY`
+- `FLUX_API_KEY`
 
 ## Scheduler
 

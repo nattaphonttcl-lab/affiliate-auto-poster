@@ -11,6 +11,7 @@ from app.repositories.analytics_repository import AnalyticsRepository
 from app.repositories.ai_content_repository import AIContentRepository
 from app.repositories.caption_repository import CaptionRepository
 from app.repositories.dashboard_repository import DashboardRepository
+from app.repositories.image_engine_repository import ImageEngineRepository
 from app.repositories.image_repository import ImageRepository
 from app.repositories.product_repository import ProductRepository
 from app.repositories.scheduler_repository import SchedulerRepository
@@ -21,6 +22,8 @@ from app.services.analytics_service import AnalyticsService
 from app.services.auth_service import AuthService
 from app.services.caption_service import CaptionService
 from app.services.dashboard_service import DashboardService
+from app.services.image_engine_service import ImageEngineService
+from app.services.image_providers import ImageProviderFactory, ImageProviderRegistry
 from app.services.image_service import ImageService
 from app.services.marketplace_provider import MarketplaceProviderRegistry
 from app.services.product_service import ProductService
@@ -29,6 +32,7 @@ from app.services.refresh_queue import InMemoryProductRefreshQueue, ProductRefre
 from app.services.scheduler_service import SchedulerService
 from app.services.shopee_product_service import ShopeeProductService
 from app.services.user_service import UserService
+from app.services.image_storage import StorageConfig, StorageFactory
 from app.utils.ai_caption_engine import AICaptionEngine
 from app.utils.image_generator_engine import ImageGeneratorEngine
 from app.utils.post_publisher import (
@@ -44,6 +48,10 @@ _product_cache = InMemoryTTLCache()
 _refresh_queue = InMemoryProductRefreshQueue()
 _ai_template_cache = InMemoryTTLCache()
 _ai_provider_factory = ProviderFactory()
+_image_template_cache = InMemoryTTLCache()
+_image_provider_factory = ImageProviderFactory()
+_image_provider_registry = ImageProviderRegistry(factory=_image_provider_factory)
+_storage_factory = StorageFactory()
 
 
 def get_settings_dependency() -> Settings:
@@ -152,6 +160,34 @@ def get_image_service(
     )
     return ImageService(
         product_repository, image_repository, generator, analytics_repository
+    )
+
+
+def get_image_engine_service(
+    db: Session = Depends(get_db_session),
+    settings: Settings = Depends(get_settings_dependency),
+    analytics_repository: AnalyticsRepository = Depends(get_analytics_repository),
+) -> ImageEngineService:
+    product_repository = ProductRepository(db)
+    ai_repository = AIContentRepository(db)
+    image_repository = ImageEngineRepository(db)
+    storage_backend = _storage_factory.build(
+        StorageConfig(
+            backend=settings.image_storage_backend,
+            local_dir=settings.image_storage_local_dir,
+            bucket=settings.image_storage_bucket,
+            endpoint=settings.image_storage_endpoint,
+        )
+    )
+    return ImageEngineService(
+        product_repository,
+        ai_repository,
+        image_repository,
+        _image_provider_registry,
+        storage_backend,
+        settings,
+        _image_template_cache,
+        analytics_repository,
     )
 
 

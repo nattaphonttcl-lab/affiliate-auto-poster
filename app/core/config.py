@@ -16,6 +16,22 @@ class Settings(BaseSettings):
     shopee_request_timeout_seconds: float = Field(default=10.0)
     image_output_dir: str = Field(default="generated_images")
     image_request_timeout_seconds: float = Field(default=10.0)
+    image_storage_backend: str = Field(default="local")
+    image_storage_local_dir: str = Field(default="generated_images")
+    image_storage_bucket: str | None = Field(default=None)
+    image_storage_endpoint: str | None = Field(default=None)
+    image_template_cache_ttl_seconds: int = Field(default=300)
+    image_provider_failover_order: str = Field(
+        default="local_template,openai,google_imagen,stability_ai,flux"
+    )
+    image_provider_encryption_key: str = Field(default="change-me-image-provider")
+    image_min_resolution_width: int = Field(default=512)
+    image_min_resolution_height: int = Field(default=512)
+    image_max_upload_size_mb: int = Field(default=10)
+
+    google_imagen_api_key: str | None = Field(default=None)
+    stability_ai_api_key: str | None = Field(default=None)
+    flux_api_key: str | None = Field(default=None)
 
     scheduler_publisher_mode: str = Field(default="audit")
     scheduler_webhook_url: str | None = Field(default=None)
