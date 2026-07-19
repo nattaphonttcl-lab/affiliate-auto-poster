@@ -15,11 +15,17 @@ import { ProductsPage } from "../features/products/products-page";
 import { PublishingPage } from "../features/publishing/publishing-page";
 import { SettingsPage } from "../features/settings/settings-page";
 import { UsersPage } from "../features/users/users-page";
+import { isSingleUserMode } from "../features/auth/mode";
 
 export function AppRouter() {
+  const singleUserMode = isSingleUserMode();
+
   return (
     <Routes>
-      <Route path="/login" element={<LoginPage />} />
+      <Route
+        path="/login"
+        element={singleUserMode ? <Navigate to="/dashboard" replace /> : <LoginPage />}
+      />
       <Route element={<RequireAuth allowPasswordChange />}>
         <Route path="/change-password" element={<PasswordChangePage />} />
       </Route>

@@ -18,6 +18,7 @@ from app.repositories.publishing_repository import PublishingRepository
 from app.repositories.scheduler_repository import SchedulerRepository
 from app.repositories.saas_repository import SaaSRepository
 from app.repositories.user_repository import UserRepository
+from app.models.user import User
 from app.services.ai_content_service import AIContentService
 from app.services.ai_providers import ProviderFactory
 from app.services.analytics_service import AnalyticsService
@@ -49,7 +50,7 @@ from app.utils.post_publisher import (
 from app.utils.shopee_parser import ShopeeProductParser
 from app.utils.shopee_validator import ShopeeProductValidator
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login", auto_error=False)
 _product_cache = InMemoryTTLCache()
 _refresh_queue = InMemoryProductRefreshQueue()
 _ai_template_cache = InMemoryTTLCache()
@@ -255,27 +256,40 @@ def get_saas_service(db: Session = Depends(get_db_session)) -> SaaSService:
 
 
 def get_current_user_id(
-    token: str = Depends(oauth2_scheme),
+    token: str | None = Depends(oauth2_scheme),
     settings: Settings = Depends(get_settings_dependency),
+    db: Session = Depends(get_db_session),
 ) -> int:
+    if settings.single_user_mode:
+        return _get_or_create_single_user_id(settings=settings, db=db)
+
     payload = _decode_token_payload_or_401(token=token, settings=settings)
+    user = _get_active_user_from_payload(payload=payload, db=db)
     if payload.get("must_change_password") is True:
         raise AppException(status_code=403, detail="Password change required")
 
-    return _subject_to_int(payload)
+    return user.id
 
 
 def get_current_user_id_allow_password_change(
-    token: str = Depends(oauth2_scheme),
+    token: str | None = Depends(oauth2_scheme),
     settings: Settings = Depends(get_settings_dependency),
+    db: Session = Depends(get_db_session),
 ) -> int:
+    if settings.single_user_mode:
+        return _get_or_create_single_user_id(settings=settings, db=db)
+
     payload = _decode_token_payload_or_401(token=token, settings=settings)
-    return _subject_to_int(payload)
+    user = _get_active_user_from_payload(payload=payload, db=db)
+    return user.id
 
 
 def _decode_token_payload_or_401(
-    *, token: str, settings: Settings
+    *, token: str | None, settings: Settings
 ) -> dict[str, object]:
+    if not token:
+        raise AppException(status_code=401, detail="Not authenticated")
+
     payload = decode_access_token_payload(token=token, settings=settings)
     if payload is None:
         raise AppException(status_code=401, detail="Invalid or expired token")
@@ -292,3 +306,33 @@ def _subject_to_int(payload: dict[str, object]) -> int:
         return int(subject)
     except ValueError as exc:
         raise AppException(status_code=401, detail="Invalid token subject") from exc
+
+
+def _get_active_user_from_payload(*, payload: dict[str, object], db: Session) -> User:
+    user_id = _subject_to_int(payload)
+    user = UserRepository(db).get_by_id(user_id)
+    if user is None:
+        raise AppException(status_code=401, detail="Invalid or expired token")
+    if not user.is_active:
+        raise AppException(status_code=403, detail="User is inactive")
+    return user
+
+
+def _get_or_create_single_user_id(*, settings: Settings, db: Session) -> int:
+    repository = UserRepository(db)
+    user = repository.get_by_email(settings.initial_admin_email)
+    if user is not None:
+        return user.id
+
+    service = UserService(repository)
+    try:
+        user = service.create_user(
+            email=settings.initial_admin_email,
+            password=settings.initial_admin_password,
+        )
+    except AppException:
+        user = repository.get_by_email(settings.initial_admin_email)
+        if user is None:
+            raise
+
+    return user.id

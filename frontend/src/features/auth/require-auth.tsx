@@ -1,6 +1,7 @@
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 
 import { useAuth } from "./auth-context";
+import { isSingleUserMode } from "./mode";
 
 type Props = {
   allowedRoles?: Array<"admin" | "editor" | "viewer">;
@@ -10,6 +11,11 @@ type Props = {
 export function RequireAuth({ allowedRoles, allowPasswordChange = false }: Props) {
   const { isAuthenticated, user, mustChangePassword } = useAuth();
   const location = useLocation();
+  const singleUserMode = isSingleUserMode();
+
+  if (singleUserMode) {
+    return <Outlet />;
+  }
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace state={{ from: location }} />;

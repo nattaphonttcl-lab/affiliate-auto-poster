@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     debug: bool = Field(default=False)
 
     api_v1_prefix: str = Field(default="/api/v1")
+    single_user_mode: bool = Field(default=False)
 
     database_url: str = Field(default="sqlite:///./affiliate.db")
     db_pool_size: int = Field(default=10)

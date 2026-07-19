@@ -36,6 +36,71 @@ def test_protected_route_requires_token(client: TestClient) -> None:
     assert response.status_code == 401
 
 
+def test_single_user_mode_allows_protected_route_without_token(
+    client: TestClient,
+) -> None:
+    settings = get_settings()
+    previous = settings.single_user_mode
+    settings.single_user_mode = True
+
+    try:
+        response = client.get("/api/v1/users")
+    finally:
+        settings.single_user_mode = previous
+
+    assert response.status_code == 200
+    assert response.json()[0]["email"] == settings.initial_admin_email
+
+
+def test_switching_between_auth_modes(client: TestClient) -> None:
+    settings = get_settings()
+    previous = settings.single_user_mode
+
+    settings.single_user_mode = True
+    try:
+        response = client.get("/api/v1/users")
+        assert response.status_code == 200
+    finally:
+        settings.single_user_mode = previous
+
+    response = client.get("/api/v1/users")
+    assert response.status_code == 401
+
+
+def test_inactive_user_token_cannot_access_protected_route(
+    client: TestClient,
+) -> None:
+    client.post(
+        "/api/v1/users",
+        json={"email": "owner@example.com", "password": "StrongPass123"},
+    )
+
+    login_response = client.post(
+        "/api/v1/auth/login",
+        json={"email": "owner@example.com", "password": "StrongPass123"},
+    )
+    token = login_response.json()["access_token"]
+
+    users_response = client.get(
+        "/api/v1/users",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    user_id = users_response.json()[0]["id"]
+
+    client.patch(
+        f"/api/v1/users/{user_id}",
+        json={"is_active": False},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    blocked_response = client.get(
+        "/api/v1/users",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert blocked_response.status_code == 403
+    assert blocked_response.json()["detail"] == "User is inactive"
+
+
 def test_bootstrap_admin_login_and_password_rotation(
     client: TestClient, db_session: Session
 ) -> None:

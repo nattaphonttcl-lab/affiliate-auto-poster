@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 
 import { useAuth } from "./auth-context";
+import { isSingleUserMode } from "./mode";
 
 const schema = z.object({
   email: z.string().email(),
@@ -17,6 +19,17 @@ export function LoginPage() {
   const navigate = useNavigate();
   const { login } = useAuth();
   const [error, setError] = useState<string | null>(null);
+  const singleUserMode = isSingleUserMode();
+
+  useEffect(() => {
+    if (singleUserMode) {
+      navigate("/dashboard", { replace: true });
+    }
+  }, [singleUserMode, navigate]);
+
+  if (singleUserMode) {
+    return null;
+  }
 
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -31,8 +44,20 @@ export function LoginPage() {
     try {
       await login(values.email, values.password);
       navigate("/dashboard", { replace: true });
-    } catch {
-      setError("Login failed. Please verify your credentials.");
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        if (error.response?.status === 401) {
+          setError("Invalid email or password.");
+          return;
+        }
+        if (!error.response) {
+          setError(
+            "Unable to reach server. Check your network or API/CORS configuration.",
+          );
+          return;
+        }
+      }
+      setError("Login failed. Please try again.");
     }
   });
 

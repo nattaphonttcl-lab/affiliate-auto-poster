@@ -18,6 +18,7 @@ import {
   setRefreshToken,
   setSessionExpiresAt,
 } from "../../lib/storage";
+import { isSingleUserMode } from "./mode";
 
 type AuthUser = {
   email: string;
@@ -63,9 +64,20 @@ function getMustChangePasswordFromToken(token: string): boolean {
 }
 
 export function AuthProvider({ children }: PropsWithChildren) {
-  const [token, setToken] = useState<string | null>(() => getAccessToken());
+  const singleUserMode = isSingleUserMode();
+  const [token, setToken] = useState<string | null>(() =>
+    singleUserMode ? "single-user-mode" : getAccessToken(),
+  );
 
   const user = useMemo<AuthUser | null>(() => {
+    if (singleUserMode) {
+      return {
+        email: "admin@example.com",
+        role: "admin",
+        mustChangePassword: false,
+      };
+    }
+
     if (!token) {
       return null;
     }
@@ -74,14 +86,21 @@ export function AuthProvider({ children }: PropsWithChildren) {
       role: getRoleFromToken(token),
       mustChangePassword: getMustChangePasswordFromToken(token),
     };
-  }, [token]);
+  }, [singleUserMode, token]);
 
   const logout = useCallback(() => {
+    if (singleUserMode) {
+      return;
+    }
     clearSessionStorage();
     setToken(null);
-  }, []);
+  }, [singleUserMode]);
 
   useEffect(() => {
+    if (singleUserMode) {
+      return;
+    }
+
     if (!token) {
       return;
     }
@@ -122,34 +141,44 @@ export function AuthProvider({ children }: PropsWithChildren) {
         window.removeEventListener(event, onActivity);
       }
     };
-  }, [token, logout]);
+  }, [singleUserMode, token, logout]);
 
   const login = useCallback(async (email: string, password: string) => {
+    if (singleUserMode) {
+      setToken("single-user-mode");
+      void email;
+      void password;
+      return;
+    }
+
     const response = await loginApi(email, password);
     setAccessToken(response.access_token);
     setRefreshToken(getRefreshToken());
     setSessionExpiresAt(Date.now() + SESSION_MS);
     setToken(response.access_token);
     void email;
-  }, []);
+  }, [singleUserMode]);
 
   const changePassword = useCallback(async (currentPassword: string, newPassword: string) => {
+    if (singleUserMode) {
+      return;
+    }
     const { changePassword: changePasswordApi } = await import("../../lib/api");
     await changePasswordApi(currentPassword, newPassword);
     clearSessionStorage();
     setToken(null);
-  }, []);
+  }, [singleUserMode]);
 
   const value = useMemo<AuthContextValue>(
     () => ({
-      isAuthenticated: Boolean(token),
+      isAuthenticated: singleUserMode || Boolean(token),
       user,
       mustChangePassword: user?.mustChangePassword ?? false,
       login,
       changePassword,
       logout,
     }),
-    [token, user, login, changePassword, logout],
+    [singleUserMode, token, user, login, changePassword, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
