@@ -31,6 +31,7 @@ class Settings(BaseSettings):
         default="local_template,openai,google_imagen,stability_ai,flux"
     )
     image_provider_encryption_key: str = Field(default="change-me-image-provider")
+    image_provider_encryption_key_file: str | None = Field(default=None)
     image_min_resolution_width: int = Field(default=512)
     image_min_resolution_height: int = Field(default=512)
     image_max_upload_size_mb: int = Field(default=10)
@@ -57,6 +58,7 @@ class Settings(BaseSettings):
     jwt_algorithm: str = Field(default="HS256")
     initial_admin_email: str = Field(default="admin@example.com")
     initial_admin_password: str = Field(default="ChangeMe123!")
+    initial_admin_password_file: str | None = Field(default=None)
 
     cors_allowed_origins: str = Field(
         default=(
@@ -88,6 +90,7 @@ class Settings(BaseSettings):
     tracing_otlp_endpoint: str | None = Field(default=None)
 
     ai_provider_encryption_key: str = Field(default="change-me-ai-credentials")
+    ai_provider_encryption_key_file: str | None = Field(default=None)
     ai_template_cache_ttl_seconds: int = Field(default=300)
     ai_generation_rate_limit_per_minute: int = Field(default=30)
     ai_banned_words: str = Field(default="scam,fake,guaranteed rich")
@@ -122,6 +125,18 @@ class Settings(BaseSettings):
     @model_validator(mode="after")
     def _load_file_backed_secrets(self) -> "Settings":
         self.secret_key = self._resolve_secret(self.secret_key, self.secret_key_file)
+        self.initial_admin_password = self._resolve_secret(
+            self.initial_admin_password,
+            self.initial_admin_password_file,
+        )
+        self.ai_provider_encryption_key = self._resolve_secret(
+            self.ai_provider_encryption_key,
+            self.ai_provider_encryption_key_file,
+        )
+        self.image_provider_encryption_key = self._resolve_secret(
+            self.image_provider_encryption_key,
+            self.image_provider_encryption_key_file,
+        )
         self.openai_api_key = self._resolve_secret(
             self.openai_api_key, self.openai_api_key_file
         )
@@ -143,6 +158,7 @@ class Settings(BaseSettings):
         self.minio_secret_key = self._resolve_secret(
             self.minio_secret_key, self.minio_secret_key_file
         )
+        self._validate_production_secrets()
         return self
 
     @staticmethod
@@ -154,6 +170,30 @@ class Settings(BaseSettings):
         if not content:
             return value
         return content
+
+    def _validate_production_secrets(self) -> None:
+        if self.environment.lower() != "production":
+            return
+
+        insecure_values = {
+            "secret_key": {"change-me"},
+            "ai_provider_encryption_key": {"change-me-ai-credentials"},
+            "image_provider_encryption_key": {"change-me-image-provider"},
+            "initial_admin_password": {"ChangeMe123!"},
+            "minio_access_key": {"minioadmin"},
+            "minio_secret_key": {"minioadmin"},
+        }
+
+        invalid_fields = [
+            field_name
+            for field_name, disallowed in insecure_values.items()
+            if getattr(self, field_name) in disallowed
+        ]
+        if invalid_fields:
+            raise ValueError(
+                "Unsafe default secrets are not allowed in production: "
+                + ", ".join(sorted(invalid_fields))
+            )
 
     @property
     def cors_allowed_origins_list(self) -> list[str]:

@@ -1,0 +1,366 @@
+services:
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    env_file:
+      - .env.production
+    environment:
+      ENVIRONMENT: production
+      TZ: ${TZ:-UTC}
+      DATABASE_URL: sqlite:////data/affiliate.db
+      IMAGE_OUTPUT_DIR: /app/generated_images
+      IMAGE_STORAGE_LOCAL_DIR: /app/generated_images
+    command: alembic upgrade head
+    restart: "no"
+    volumes:
+      - sqlite_data:/data
+      - generated_images:/app/generated_images
+    networks:
+      - app_net
+    logging: &default_logging
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    env_file:
+      - .env.production
+    environment:
+      ENVIRONMENT: production
+      TZ: ${TZ:-UTC}
+      DATABASE_URL: sqlite:////data/affiliate.db
+      REDIS_ENABLED: "true"
+      REDIS_URL: redis://redis:6379/0
+      IMAGE_OUTPUT_DIR: /app/generated_images
+      IMAGE_STORAGE_BACKEND: local
+      IMAGE_STORAGE_LOCAL_DIR: /app/generated_images
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    restart: unless-stopped
+    stop_grace_period: 30s
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    volumes:
+      - sqlite_data:/data
+      - generated_images:/app/generated_images
+      - backup_data:/backups
+    networks:
+      - app_net
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health/readiness', timeout=3)"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    logging: *default_logging
+
+  queue-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    env_file:
+      - .env.production
+    environment:
+      ENVIRONMENT: production
+      TZ: ${TZ:-UTC}
+      DATABASE_URL: sqlite:////data/affiliate.db
+      REDIS_ENABLED: "true"
+      REDIS_URL: redis://redis:6379/0
+      IMAGE_OUTPUT_DIR: /app/generated_images
+      IMAGE_STORAGE_LOCAL_DIR: /app/generated_images
+    command: python -m app.workers.queue_worker
+    restart: unless-stopped
+    stop_grace_period: 30s
+    depends_on:
+      backend:
+        condition: service_healthy
+    volumes:
+      - sqlite_data:/data
+      - generated_images:/app/generated_images
+    networks:
+      - app_net
+    logging: *default_logging
+
+  retry-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    env_file:
+      - .env.production
+    environment:
+      ENVIRONMENT: production
+      TZ: ${TZ:-UTC}
+      DATABASE_URL: sqlite:////data/affiliate.db
+      REDIS_ENABLED: "true"
+      REDIS_URL: redis://redis:6379/0
+      IMAGE_OUTPUT_DIR: /app/generated_images
+      IMAGE_STORAGE_LOCAL_DIR: /app/generated_images
+    command: python -m app.workers.retry_worker
+    restart: unless-stopped
+    stop_grace_period: 30s
+    depends_on:
+      backend:
+        condition: service_healthy
+    volumes:
+      - sqlite_data:/data
+      - generated_images:/app/generated_images
+    networks:
+      - app_net
+    logging: *default_logging
+
+  analytics-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    env_file:
+      - .env.production
+    environment:
+      ENVIRONMENT: production
+      TZ: ${TZ:-UTC}
+      DATABASE_URL: sqlite:////data/affiliate.db
+      REDIS_ENABLED: "true"
+      REDIS_URL: redis://redis:6379/0
+      IMAGE_OUTPUT_DIR: /app/generated_images
+      IMAGE_STORAGE_LOCAL_DIR: /app/generated_images
+    command: python -m app.workers.analytics_worker
+    restart: unless-stopped
+    stop_grace_period: 30s
+    depends_on:
+      backend:
+        condition: service_healthy
+    volumes:
+      - sqlite_data:/data
+      - generated_images:/app/generated_images
+    networks:
+      - app_net
+    logging: *default_logging
+
+  cleanup-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    env_file:
+      - .env.production
+    environment:
+      ENVIRONMENT: production
+      TZ: ${TZ:-UTC}
+      DATABASE_URL: sqlite:////data/affiliate.db
+      REDIS_ENABLED: "true"
+      REDIS_URL: redis://redis:6379/0
+      IMAGE_OUTPUT_DIR: /app/generated_images
+      IMAGE_STORAGE_LOCAL_DIR: /app/generated_images
+    command: python -m app.workers.cleanup_worker
+    restart: unless-stopped
+    stop_grace_period: 30s
+    depends_on:
+      backend:
+        condition: service_healthy
+    volumes:
+      - sqlite_data:/data
+      - generated_images:/app/generated_images
+    networks:
+      - app_net
+    logging: *default_logging
+
+  health-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    env_file:
+      - .env.production
+    environment:
+      ENVIRONMENT: production
+      TZ: ${TZ:-UTC}
+      DATABASE_URL: sqlite:////data/affiliate.db
+      REDIS_ENABLED: "true"
+      REDIS_URL: redis://redis:6379/0
+      IMAGE_OUTPUT_DIR: /app/generated_images
+      IMAGE_STORAGE_LOCAL_DIR: /app/generated_images
+    command: python -m app.workers.health_worker
+    restart: unless-stopped
+    stop_grace_period: 30s
+    depends_on:
+      backend:
+        condition: service_healthy
+    volumes:
+      - sqlite_data:/data
+      - generated_images:/app/generated_images
+    networks:
+      - app_net
+    logging: *default_logging
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: runtime
+    restart: unless-stopped
+    networks:
+      - app_net
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/ >/dev/null || exit 1"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    logging: *default_logging
+
+  nginx:
+    image: nginx:1.29-alpine
+    restart: unless-stopped
+    environment:
+      TZ: ${TZ:-UTC}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./deploy/nginx/certs:/etc/nginx/certs:ro
+      - nginx_cache:/var/cache/nginx
+    depends_on:
+      backend:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
+    networks:
+      - app_net
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider --no-check-certificate https://127.0.0.1/ || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    logging: *default_logging
+
+  redis:
+    image: redis:8.2-alpine
+    command: redis-server --save 60 1000 --appendonly yes
+    restart: unless-stopped
+    environment:
+      TZ: ${TZ:-UTC}
+    volumes:
+      - redis_data:/data
+    networks:
+      - app_net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    logging: *default_logging
+
+  minio:
+    image: minio/minio:RELEASE.2026-06-13T11-33-47Z
+    command: server /data --console-address ":9001"
+    restart: unless-stopped
+    environment:
+      TZ: ${TZ:-UTC}
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    networks:
+      - app_net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:9000/minio/health/live"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    logging: *default_logging
+
+  prometheus:
+    image: prom/prometheus:v3.7.2
+    profiles: ["observability"]
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+    restart: unless-stopped
+    volumes:
+      - ./deploy/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    networks:
+      - app_net
+    logging: *default_logging
+
+  loki:
+    image: grafana/loki:3.5.5
+    profiles: ["observability"]
+    command: -config.file=/etc/loki/local-config.yml
+    restart: unless-stopped
+    volumes:
+      - ./deploy/loki/loki-config.yml:/etc/loki/local-config.yml:ro
+      - loki_data:/loki
+    networks:
+      - app_net
+    logging: *default_logging
+
+  promtail:
+    image: grafana/promtail:3.5.5
+    profiles: ["observability"]
+    command: -config.file=/etc/promtail/config.yml
+    restart: unless-stopped
+    volumes:
+      - ./deploy/promtail/promtail-config.yml:/etc/promtail/config.yml:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - loki
+    networks:
+      - app_net
+    logging: *default_logging
+
+  grafana:
+    image: grafana/grafana:12.2.0
+    profiles: ["observability"]
+    restart: unless-stopped
+    environment:
+      TZ: ${TZ:-UTC}
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./deploy/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+      - loki
+    networks:
+      - app_net
+    logging: *default_logging
+
+networks:
+  app_net:
+    driver: bridge
+
+volumes:
+  sqlite_data:
+  generated_images:
+  backup_data:
+  nginx_cache:
+  redis_data:
+  minio_data:
+  prometheus_data:
+  grafana_data:
+  loki_data:

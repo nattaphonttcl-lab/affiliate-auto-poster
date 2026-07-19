@@ -1,6 +1,8 @@
 from fastapi import APIRouter
 from fastapi import Depends
 from fastapi import Response
+from fastapi import status
+from fastapi.responses import JSONResponse
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
@@ -28,7 +30,10 @@ def readiness(db: Session = Depends(get_db_session)) -> dict[str, str]:
     settings = get_settings()
     if settings.redis_enabled:
         if not RedisHealth(settings.redis_url).ping():
-            return {"status": "degraded"}
+            return JSONResponse(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                content={"status": "degraded"},
+            )
     return {"status": "ready"}
 
 
