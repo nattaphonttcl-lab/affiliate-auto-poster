@@ -144,6 +144,75 @@ uvicorn app.main:app --reload
 
 Swagger UI is available at `http://localhost:8000/docs`.
 
+## Installation
+
+1. Install Python 3.12.
+2. Create and activate a virtual environment.
+3. Install dependencies with `pip install -r requirements.txt`.
+4. Copy `.env.example` to `.env`.
+5. Run `alembic upgrade head`.
+
+## Environment Variables
+
+- Core:
+	- `APP_NAME`, `ENVIRONMENT`, `DEBUG`, `API_V1_PREFIX`
+- Database:
+	- `DATABASE_URL`
+- Security/Auth:
+	- `SECRET_KEY`, `ACCESS_TOKEN_EXPIRE_MINUTES`, `JWT_ALGORITHM`
+	- `INITIAL_ADMIN_EMAIL`, `INITIAL_ADMIN_PASSWORD`
+	- `SINGLE_USER_MODE` (`true` or `false`)
+- CORS/Rate limit:
+	- `CORS_ALLOWED_ORIGINS`, `RATE_LIMIT_REQUESTS_PER_MINUTE`
+
+## SINGLE_USER_MODE
+
+- `SINGLE_USER_MODE=true`:
+	- Protected APIs automatically run as the configured admin user.
+	- No JWT, Authorization header, or login is required.
+- `SINGLE_USER_MODE=false`:
+	- Standard JWT authentication is enforced.
+
+## Development Startup
+
+```bash
+alembic upgrade head
+uvicorn app.main:app --reload
+```
+
+## Production Startup
+
+```bash
+alembic upgrade head
+uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
+
+Or run the container stack:
+
+```bash
+docker compose up --build
+```
+
+## Backup
+
+- Create backup archive with:
+	- `python scripts/backup.py --help`
+
+## Restore
+
+- Restore from backup archive with:
+	- `python scripts/restore.py --help`
+
+## Troubleshooting
+
+- See `docs/troubleshooting-guide.md`.
+- Common startup issue: if migrations are not applied, run `alembic upgrade head`.
+
+## Known Limitations
+
+- See `docs/known-limitations.md`.
+- Some provider-backed integrations require external network/API credentials in production.
+
 ## First Startup
 
 On the first application startup, the backend automatically creates an administrator account only when the `users` table is empty.
