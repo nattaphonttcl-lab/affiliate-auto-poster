@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 import time
 from uuid import uuid4
 from collections.abc import Awaitable
@@ -17,12 +18,18 @@ from app.core.middleware import SecurityHeadersMiddleware
 from app.core.request_context import set_request_id
 from app.core.tracing import configure_tracing
 from app.core.logging import configure_logging, logger
-from app.db.session import get_engine
+from app.db.session import SessionLocal, get_engine
+from app.services.bootstrap_service import BootstrapService
 
 
 def create_app() -> FastAPI:
     settings = get_settings()
     configure_logging(settings.log_level, json_logs=settings.log_json)
+
+    @asynccontextmanager
+    async def lifespan(_: FastAPI):
+        BootstrapService(session_factory=SessionLocal, settings=settings).run()
+        yield
 
     app = FastAPI(
         title=settings.app_name,
@@ -31,6 +38,7 @@ def create_app() -> FastAPI:
         docs_url="/docs",
         redoc_url="/redoc",
         openapi_url="/openapi.json",
+        lifespan=lifespan,
     )
 
     app.add_middleware(GZipMiddleware, minimum_size=1024)

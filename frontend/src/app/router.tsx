@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 
 import { AppShell } from "../components/layout/app-shell";
 import { LoginPage } from "../features/auth/login-page";
+import { PasswordChangePage } from "../features/auth/password-change-page";
 import { RequireAuth } from "../features/auth/require-auth";
 import { AiStudioPage } from "../features/ai-studio/ai-studio-page";
 import { AnalyticsPage } from "../features/analytics/analytics-page";
@@ -19,6 +20,9 @@ export function AppRouter() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route element={<RequireAuth allowPasswordChange />}>
+        <Route path="/change-password" element={<PasswordChangePage />} />
+      </Route>
       <Route element={<RequireAuth />}>
         <Route element={<AppShell />}>
           <Route path="/dashboard" element={<DashboardPage />} />

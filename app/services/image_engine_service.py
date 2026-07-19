@@ -452,13 +452,52 @@ class ImageEngineService:
             image_type=image_type, version=version
         )
         if item is None:
-            raise AppException(status_code=404, detail="No active image template found")
+            fallback_payload = self._build_fallback_template(image_type=image_type)
+            item = self._repository.create_template(
+                payload=fallback_payload,
+                created_by=0,
+            )
         self._template_cache.set(
             cache_key,
             str(item.id),
             ttl_seconds=self._settings.image_template_cache_ttl_seconds,
         )
         return item
+
+    def _build_fallback_template(
+        self, *, image_type: ImageType
+    ) -> ImageTemplateCreateRequest:
+        dimensions = {
+            ImageType.VERTICAL_IMAGE: (1080, 1920),
+            ImageType.HORIZONTAL_IMAGE: (1920, 1080),
+            ImageType.SQUARE_IMAGE: (1080, 1080),
+            ImageType.INSTAGRAM_STORY: (1080, 1920),
+            ImageType.YOUTUBE_THUMBNAIL: (1280, 720),
+            ImageType.FACEBOOK_COVER: (820, 312),
+        }
+        width, height = dimensions.get(image_type, (1080, 1080))
+        return ImageTemplateCreateRequest(
+            name=f"Auto Template {image_type.value}",
+            image_type=image_type,
+            canvas_width=width,
+            canvas_height=height,
+            safe_area={"x": 40, "y": 40, "width": width - 80, "height": height - 80},
+            background={"type": "solid", "color": "#ffffff"},
+            layers=[{"name": "headline"}, {"name": "price"}],
+            fonts={"headline": "DejaVuSans-Bold.ttf", "body": "DejaVuSans.ttf"},
+            colors={"headline": "#111111", "body": "#222222", "accent": "#2563eb"},
+            logo_position={
+                "x": max(0, width - 180),
+                "y": 20,
+                "width": 160,
+                "height": 60,
+            },
+            watermark={"enabled": False},
+            overlay={"enabled": False},
+            dynamic_variables=["product_name", "price", "caption"],
+            version=1,
+            status=ImageTemplateStatus.ACTIVE,
+        )
 
     def _template_cache_key(self, image_type: ImageType, version: int | None) -> str:
         suffix = "latest" if version is None else str(version)

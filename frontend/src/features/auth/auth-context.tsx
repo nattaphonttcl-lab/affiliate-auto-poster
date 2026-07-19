@@ -22,12 +22,15 @@ import {
 type AuthUser = {
   email: string;
   role: "admin" | "editor" | "viewer";
+  mustChangePassword: boolean;
 };
 
 type AuthContextValue = {
   isAuthenticated: boolean;
   user: AuthUser | null;
+  mustChangePassword: boolean;
   login: (email: string, password: string) => Promise<void>;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
   logout: () => void;
 };
 
@@ -49,6 +52,16 @@ function getRoleFromToken(token: string): AuthUser["role"] {
   return "admin";
 }
 
+function getMustChangePasswordFromToken(token: string): boolean {
+  try {
+    const payloadBase64 = token.split(".")[1];
+    const payload = JSON.parse(atob(payloadBase64));
+    return payload.must_change_password === true;
+  } catch {
+    return false;
+  }
+}
+
 export function AuthProvider({ children }: PropsWithChildren) {
   const [token, setToken] = useState<string | null>(() => getAccessToken());
 
@@ -59,6 +72,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     return {
       email: "authenticated@local",
       role: getRoleFromToken(token),
+      mustChangePassword: getMustChangePasswordFromToken(token),
     };
   }, [token]);
 
@@ -119,14 +133,23 @@ export function AuthProvider({ children }: PropsWithChildren) {
     void email;
   }, []);
 
+  const changePassword = useCallback(async (currentPassword: string, newPassword: string) => {
+    const { changePassword: changePasswordApi } = await import("../../lib/api");
+    await changePasswordApi(currentPassword, newPassword);
+    clearSessionStorage();
+    setToken(null);
+  }, []);
+
   const value = useMemo<AuthContextValue>(
     () => ({
       isAuthenticated: Boolean(token),
       user,
+      mustChangePassword: user?.mustChangePassword ?? false,
       login,
+      changePassword,
       logout,
     }),
-    [token, user, login, logout],
+    [token, user, login, changePassword, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

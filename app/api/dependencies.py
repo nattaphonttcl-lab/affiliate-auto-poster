@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from app.core.cache import InMemoryTTLCache
 from app.core.config import Settings, get_settings
 from app.core.exceptions import AppException
-from app.core.security import decode_access_token
+from app.core.security import decode_access_token_payload
 from app.db.session import get_db_session
 from app.repositories.analytics_repository import AnalyticsRepository
 from app.repositories.ai_content_repository import AIContentRepository
@@ -258,9 +258,35 @@ def get_current_user_id(
     token: str = Depends(oauth2_scheme),
     settings: Settings = Depends(get_settings_dependency),
 ) -> int:
-    subject = decode_access_token(token=token, settings=settings)
-    if not subject:
+    payload = _decode_token_payload_or_401(token=token, settings=settings)
+    if payload.get("must_change_password") is True:
+        raise AppException(status_code=403, detail="Password change required")
+
+    return _subject_to_int(payload)
+
+
+def get_current_user_id_allow_password_change(
+    token: str = Depends(oauth2_scheme),
+    settings: Settings = Depends(get_settings_dependency),
+) -> int:
+    payload = _decode_token_payload_or_401(token=token, settings=settings)
+    return _subject_to_int(payload)
+
+
+def _decode_token_payload_or_401(
+    *, token: str, settings: Settings
+) -> dict[str, object]:
+    payload = decode_access_token_payload(token=token, settings=settings)
+    if payload is None:
         raise AppException(status_code=401, detail="Invalid or expired token")
+
+    return payload
+
+
+def _subject_to_int(payload: dict[str, object]) -> int:
+    subject = payload.get("sub")
+    if not isinstance(subject, str):
+        raise AppException(status_code=401, detail="Invalid token subject")
 
     try:
         return int(subject)

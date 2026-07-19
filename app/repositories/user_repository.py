@@ -1,5 +1,6 @@
 from typing import Protocol
 
+from sqlalchemy import func
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -10,6 +11,8 @@ class UserRepositoryProtocol(Protocol):
     def get_by_id(self, user_id: int) -> User | None: ...
 
     def get_by_email(self, email: str) -> User | None: ...
+
+    def count(self) -> int: ...
 
     def list(self) -> list[User]: ...
 
@@ -28,6 +31,10 @@ class UserRepository(UserRepositoryProtocol):
     def get_by_email(self, email: str) -> User | None:
         stmt = select(User).where(User.email == email)
         return self._db.execute(stmt).scalar_one_or_none()
+
+    def count(self) -> int:
+        stmt = select(func.count()).select_from(User)
+        return int(self._db.execute(stmt).scalar_one())
 
     def list(self) -> list[User]:
         stmt = select(User).order_by(User.id.asc())

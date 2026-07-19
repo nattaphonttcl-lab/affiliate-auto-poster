@@ -144,6 +144,16 @@ uvicorn app.main:app --reload
 
 Swagger UI is available at `http://localhost:8000/docs`.
 
+## First Startup
+
+On the first application startup, the backend automatically creates an administrator account only when the `users` table is empty.
+
+- Default email: `admin@example.com`
+- Default password: `ChangeMe123!`
+- Override with environment variables: `INITIAL_ADMIN_EMAIL`, `INITIAL_ADMIN_PASSWORD`
+
+After the first login, the initial administrator must change the password before accessing the dashboard. Change the password immediately after signing in for the first time.
+
 ## Docker
 
 Run backend with Docker Compose:
@@ -156,6 +166,7 @@ docker compose up --build
 
 - `GET /api/v1/health`
 - `POST /api/v1/auth/login`
+- `POST /api/v1/auth/change-password` (JWT required, allowed for initial password rotation)
 - `POST /api/v1/users`
 - `GET /api/v1/users` (JWT required)
 - `GET /api/v1/users/{user_id}` (JWT required)
