@@ -488,6 +488,22 @@ class PublishingRepository(PublishingRepositoryProtocol):
         self._db.flush()
         return row
 
+    def list_dead_letters(self, *, limit: int = 100) -> list[DeadLetterQueue]:
+        stmt = (
+            select(DeadLetterQueue)
+            .order_by(DeadLetterQueue.created_at.asc(), DeadLetterQueue.id.asc())
+            .limit(limit)
+        )
+        return list(self._db.scalars(stmt))
+
+    def delete_dead_letter(self, *, dead_letter_id: int) -> bool:
+        row = self._db.get(DeadLetterQueue, dead_letter_id)
+        if row is None:
+            return False
+        self._db.delete(row)
+        self._db.flush()
+        return True
+
     def create_audit_log(
         self,
         *,

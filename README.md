@@ -602,3 +602,35 @@ python -m compileall app tests alembic
 - Docker:
 	- `docker compose config`
 
+## Sprint 9 Release Candidate (v1.0.0)
+
+- Focus: production readiness, integration hardening, end-to-end validation, security/performance/observability review, and release packaging.
+- No new business features were introduced; architecture and API surface remain backward compatible.
+
+### RC Artifacts
+
+- `CHANGELOG.md`
+- `VERSION`
+- `docs/architecture-audit-report.md`
+- `docs/risk-assessment.md`
+- `docs/security-review-report.md`
+- `docs/performance-report.md`
+- `docs/operations-observability-report.md`
+- `docs/architecture-diagram.md`
+- `docs/troubleshooting-guide.md`
+- `docs/known-limitations.md`
+- `docs/future-roadmap.md`
+
+### RC E2E Scenarios
+
+- Full import -> caption -> image -> schedule -> worker -> history -> analytics flow
+- Bulk product import
+- Retry failed publishing
+- Dead-letter queue recovery
+- AI provider failover procedure
+- Image provider failover procedure
+- Worker restart recovery
+- Database restart recovery check
+- Redis readiness check
+- Disaster recovery backup/restore flow
+

@@ -374,8 +374,45 @@ class PublishingService:
         return len(rows)
 
     def process_dead_letter(self, *, limit: int = 100) -> int:
-        _ = limit
-        return 0
+        recovered = 0
+        dead_letters = self._repository.list_dead_letters(limit=limit)
+        for item in dead_letters:
+            job = self._repository.get_job(item.job_id)
+            if job is None:
+                self._repository.delete_dead_letter(dead_letter_id=item.id)
+                recovered += 1
+                continue
+
+            if job.status != PublishingStatus.FAILED.value:
+                self._repository.delete_dead_letter(dead_letter_id=item.id)
+                recovered += 1
+                continue
+
+            now = datetime.now(UTC)
+            self._repository.update_job_status(
+                job_id=job.id,
+                status=PublishingStatus.RETRY.value,
+                next_retry_at=now,
+                last_error=None,
+            )
+            self._repository.update_queue_status(
+                job_id=job.id,
+                status=PublishingStatus.RETRY.value,
+                visible_at=now,
+                lock_owner=None,
+            )
+            self._repository.create_audit_log(
+                owner_user_id=job.owner_user_id,
+                action="dead_letter_recovered",
+                details={"job_id": job.id, "dead_letter_id": item.id},
+                job_id=job.id,
+            )
+            self._repository.delete_dead_letter(dead_letter_id=item.id)
+            recovered += 1
+
+        if recovered:
+            self._repository.commit()
+        return recovered
 
     def cleanup_expired(self, *, now: datetime | None = None) -> int:
         now_value = now or datetime.now(UTC)

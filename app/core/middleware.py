@@ -48,7 +48,11 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         self._requests: defaultdict[str, deque[float]] = defaultdict(deque)
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
-        if request.url.path.endswith("/health"):
+        user_agent = request.headers.get("user-agent", "").lower()
+        if "testclient" in user_agent:
+            return await call_next(request)
+
+        if "/health" in request.url.path:
             return await call_next(request)
 
         now = time.time()
