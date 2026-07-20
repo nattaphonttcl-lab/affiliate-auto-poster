@@ -1,0 +1,10 @@
+# Default code owner for all paths
+* @nattaphonttcl-lab
+
+# Backend and infrastructure
+/app/ @nattaphonttcl-lab
+/alembic/ @nattaphonttcl-lab
+/.github/ @nattaphonttcl-lab
+
+# Frontend
+/frontend/ @nattaphonttcl-lab
