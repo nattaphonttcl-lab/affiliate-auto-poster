@@ -1,7 +1,9 @@
 import { apiClient } from "./api-client";
 import type {
-  ActivityItem,
-  DashboardSummary,
+  AnalyticsEventsResponse,
+  AnalyticsOverviewResponse,
+  DashboardActivityResponse,
+  DashboardSummaryResponse,
   PaginatedResponse,
   Product,
   PublishingJob,
@@ -25,12 +27,12 @@ export async function changePassword(currentPassword: string, newPassword: strin
 }
 
 export async function getDashboardSummary() {
-  const { data } = await apiClient.get<DashboardSummary>("/dashboard/summary");
+  const { data } = await apiClient.get<DashboardSummaryResponse>("/dashboard/summary");
   return data;
 }
 
 export async function getDashboardActivities() {
-  const { data } = await apiClient.get<ActivityItem[]>("/dashboard/activities");
+  const { data } = await apiClient.get<DashboardActivityResponse>("/dashboard/activities");
   return data;
 }
 
@@ -95,12 +97,12 @@ export async function getSocialAccounts() {
 }
 
 export async function getAnalyticsOverview() {
-  const { data } = await apiClient.get("/analytics/overview");
+  const { data } = await apiClient.get<AnalyticsOverviewResponse>("/analytics/overview");
   return data;
 }
 
 export async function getAnalyticsEvents() {
-  const { data } = await apiClient.get("/analytics/events");
+  const { data } = await apiClient.get<AnalyticsEventsResponse>("/analytics/events");
   return data;
 }
 

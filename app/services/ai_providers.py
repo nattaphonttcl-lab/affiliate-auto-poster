@@ -55,9 +55,34 @@ class _BaseHTTPProvider:
             f"{keys}. Each value must be a non-empty string."
         )
 
+    def _strip_markdown_code_fences(self, text: str) -> str:
+        cleaned = text.strip()
+        if not cleaned.startswith("```"):
+            return cleaned
+
+        first_newline = cleaned.find("\n")
+        if first_newline == -1:
+            return cleaned
+
+        opening_fence = cleaned[:first_newline].strip()
+        if not opening_fence.startswith("```"):
+            return cleaned
+
+        body_and_tail = cleaned[first_newline + 1 :]
+        closing_index = body_and_tail.rfind("```")
+        if closing_index == -1:
+            return cleaned
+
+        body = body_and_tail[:closing_index]
+        tail = body_and_tail[closing_index + 3 :].strip()
+        if tail:
+            return cleaned
+
+        return body.strip()
+
     def _parse_json(self, text: str, expected_keys: list[str]) -> dict[str, str]:
         try:
-            payload = json.loads(text)
+            payload = json.loads(self._strip_markdown_code_fences(text))
         except json.JSONDecodeError as exc:
             raise AppException(
                 status_code=502, detail="AI provider returned invalid JSON"
