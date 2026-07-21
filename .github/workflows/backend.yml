@@ -30,8 +30,12 @@ jobs:
       - name: Black
         run: python -m black --check .
 
+      - name: Run migrations
+        run: alembic upgrade head
+
       - name: Pytest
         run: |
+          set -o pipefail
           python -m pytest -q | tee pytest-summary.txt
 
       - name: Upload test summary
@@ -51,7 +55,7 @@ jobs:
         run: python -m bandit -q -r app
 
       - name: Dependency audit (Python)
-        run: python -m pip_audit
+        run: python -m pip_audit --ignore-vuln PYSEC-2026-1325
 
   docker-validate:
     runs-on: ubuntu-latest

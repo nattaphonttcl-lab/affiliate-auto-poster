@@ -20,6 +20,13 @@ export function LoginPage() {
   const { login } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const singleUserMode = isSingleUserMode();
+  const form = useForm<FormData>({
+    resolver: zodResolver(schema),
+    defaultValues: {
+      email: "",
+      password: "",
+    },
+  });
 
   useEffect(() => {
     if (singleUserMode) {
@@ -30,14 +37,6 @@ export function LoginPage() {
   if (singleUserMode) {
     return null;
   }
-
-  const form = useForm<FormData>({
-    resolver: zodResolver(schema),
-    defaultValues: {
-      email: "",
-      password: "",
-    },
-  });
 
   const onSubmit = form.handleSubmit(async (values) => {
     setError(null);

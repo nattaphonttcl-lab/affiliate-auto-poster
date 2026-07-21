@@ -40,8 +40,7 @@ def upgrade() -> None:
         )
         batch_op.create_index("ix_scheduled_posts_state", ["state"], unique=False)
 
-    op.execute(
-        """
+    op.execute("""
         UPDATE scheduled_posts
         SET state = CASE
             WHEN status = 'pending' AND is_confirmed = 1 THEN 'confirmed'
@@ -51,8 +50,7 @@ def upgrade() -> None:
             WHEN status = 'failed' THEN 'failed'
             ELSE 'awaiting_confirmation'
         END
-        """
-    )
+        """)
 
     op.drop_index("ix_scheduled_posts_is_confirmed", table_name="scheduled_posts")
     op.drop_index("ix_scheduled_posts_status", table_name="scheduled_posts")
@@ -142,8 +140,7 @@ def downgrade() -> None:
             "ix_scheduled_posts_is_confirmed", ["is_confirmed"], unique=False
         )
 
-    op.execute(
-        """
+    op.execute("""
         UPDATE scheduled_posts
         SET status = CASE
             WHEN state = 'awaiting_confirmation' OR state = 'confirmed' THEN 'pending'
@@ -152,14 +149,11 @@ def downgrade() -> None:
             WHEN state = 'failed' THEN 'failed'
             ELSE 'pending'
         END
-        """
-    )
-    op.execute(
-        """
+        """)
+    op.execute("""
         UPDATE scheduled_posts
         SET is_confirmed = CASE WHEN state = 'confirmed' THEN 1 ELSE 0 END
-        """
-    )
+        """)
 
     with op.batch_alter_table("scheduled_posts") as batch_op:
         batch_op.drop_index("ix_scheduled_posts_state")
